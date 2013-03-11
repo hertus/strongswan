@@ -29,6 +29,7 @@ ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_XAUTH,
 	"pre-shared key",
 	"EAP",
 	"XAuth",
+	/**PACE implement new AUTH_CLASS GSPM */
 );
 
 ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,

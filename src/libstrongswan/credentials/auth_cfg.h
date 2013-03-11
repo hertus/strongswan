@@ -44,6 +44,7 @@ enum auth_class_t {
 	AUTH_CLASS_EAP = 3,
 	/** authentication using IKEv1 XAUTH */
 	AUTH_CLASS_XAUTH = 4,
+	/** PACE new AUTH_CLASS_GSPM = 5 */
 };
 
 /**
