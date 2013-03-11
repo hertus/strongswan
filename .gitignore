@@ -32,3 +32,6 @@ apidoc/
 *.diff
 *.tar.bz2
 *.tar.gz
+.cproject
+.project
+.settings
