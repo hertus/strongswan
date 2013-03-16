@@ -94,7 +94,7 @@ static const char *LST_keyexchange[] = {
 	"ikev2",
 	 NULL
 };
-
+/** PACE authby value */
 static const char *LST_authby[] = {
 	"psk",
 	"secret",
@@ -106,6 +106,7 @@ static const char *LST_authby[] = {
 	"xauthpsk",
 	"xauthrsasig",
 	"never",
+	"gspm",
 	 NULL
 };
 
