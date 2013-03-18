@@ -227,6 +227,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	enumerator->destroy(enumerator);
 }
 
+/**PACE build initiator init payload */
 METHOD(task_t, build_i, status_t,
 	private_ike_init_t *this, message_t *message)
 {

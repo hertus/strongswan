@@ -23,14 +23,14 @@
 #include <eap/eap.h>
 #include <credentials/certificates/certificate.h>
 
-/**PACE implement GSPM - authentication method name */
-ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_XAUTH,
+/**PACE implement GSPM - authentication method name + new AUTH RULE for PACE, AugPAKE... */
+ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_GSPM,
 	"any",
 	"public key",
 	"pre-shared key",
 	"EAP",
 	"XAuth",
-	"secure password method",
+	"secure password",
 );
 
 ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,

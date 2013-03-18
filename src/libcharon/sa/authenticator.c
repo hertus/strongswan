@@ -26,16 +26,16 @@
 #include <sa/ikev1/authenticators/hybrid_authenticator.h>
 #include <encoding/payloads/auth_payload.h>
 
+/** PACE authenticator method names - no auth payload -> eap*/
 ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
 	"RSA signature",
 	"pre-shared key",
 	"DSS signature");
-/** PACE authenticator method names*/
 ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_GSPM, AUTH_DSS,
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
 	"ECDSA-521 signature",
-	"secure password method");
+	"secure password");
 ENUM_NEXT(auth_method_names, AUTH_XAUTH_INIT_PSK, AUTH_HYBRID_RESP_RSA, AUTH_GSPM,
 	"XAuthInitPSK",
 	"XAuthRespPSK",
