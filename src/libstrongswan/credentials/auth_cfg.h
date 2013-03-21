@@ -33,6 +33,7 @@ typedef enum auth_class_t auth_class_t;
  * it does not specify a method, but a class of acceptable methods. The found
  * certificate finally dictates which method is used.
  */
+/**PACE AUTH_CLASS and RULE for GSPM */
 enum auth_class_t {
 	/** any class acceptable */
 	AUTH_CLASS_ANY = 0,
@@ -44,7 +45,7 @@ enum auth_class_t {
 	AUTH_CLASS_EAP = 3,
 	/** authentication using IKEv1 XAUTH */
 	AUTH_CLASS_XAUTH = 4,
-	/** PACE authentication using secure password method */
+	/** authentication using secure password method */
 	AUTH_CLASS_GSPM = 5,
 };
 
@@ -108,7 +109,7 @@ enum auth_rule_t {
 	AUTH_RULE_SIGNATURE_SCHEME,
 	/** certificatePolicy constraint, numerical OID as char* */
 	AUTH_RULE_CERT_POLICY,
-	/**PACE  GSPM type to propose for secure password authentication method */
+	/** GSPM type to propose for secure password authentication method */
 	AUTH_RULE_GSPM_PACE,
 
 	/** intermediate certificate, certificate_t* */
