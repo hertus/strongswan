@@ -13,3 +13,21 @@
  */
 
 /** PACE authenticator implementation source */
+
+#include "gspm_authenticator.h"
+
+#include <daemon.h>
+#include <sa/ikev2/keymat_v2.h>
+
+typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
+
+/**
+ * Private data of an gspm_authenticator_t object.
+ */
+struct private_gspm_authenticator_t{
+
+	/**
+	 * Public authenticator_t interface.
+	 */
+	gspm_authenticator_t public;
+};

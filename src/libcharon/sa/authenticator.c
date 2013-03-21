@@ -21,12 +21,13 @@
 #include <sa/ikev2/authenticators/pubkey_authenticator.h>
 #include <sa/ikev2/authenticators/psk_authenticator.h>
 #include <sa/ikev2/authenticators/eap_authenticator.h>
+#include <sa/ikev2/authenticators/gspm_authenticator.h>
 #include <sa/ikev1/authenticators/psk_v1_authenticator.h>
 #include <sa/ikev1/authenticators/pubkey_v1_authenticator.h>
 #include <sa/ikev1/authenticators/hybrid_authenticator.h>
 #include <encoding/payloads/auth_payload.h>
 
-/** PACE authenticator method names - no auth payload -> eap*/
+/** PACE authenticator method names - no auth payload -> eap */
 ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
 	"RSA signature",
 	"pre-shared key",
@@ -70,6 +71,9 @@ authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
 			return (authenticator_t*)eap_authenticator_create_builder(ike_sa,
 										received_nonce, sent_nonce,
 										received_init, sent_init, reserved);
+		case AUTH_CLASS_GSPM:
+			return (authenticator_t*)gspm_authenticator_create_builder(ike_sa,
+										received_nonce, sent_init, reserved);
 		default:
 			return NULL;
 	}
@@ -103,6 +107,9 @@ authenticator_t *authenticator_create_verifier(
 										sent_nonce, received_init, reserved);
 		case AUTH_PSK:
 			return (authenticator_t*)psk_authenticator_create_verifier(ike_sa,
+										sent_nonce, received_init, reserved);
+		case AUTH_GSPM:
+			return (authenticator_t*)gspm_authenticator_create_verifier(ike_sa,
 										sent_nonce, received_init, reserved);
 		default:
 			return NULL;
