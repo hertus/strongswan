@@ -27,7 +27,6 @@
 #include <sa/ikev1/authenticators/hybrid_authenticator.h>
 #include <encoding/payloads/auth_payload.h>
 
-/** PACE authenticator method names - no auth payload -> eap */
 ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
 	"RSA signature",
 	"pre-shared key",
@@ -73,7 +72,9 @@ authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
 										received_init, sent_init, reserved);
 		case AUTH_CLASS_GSPM:
 			return (authenticator_t*)gspm_authenticator_create_builder(ike_sa,
-										received_nonce, sent_init, reserved);
+										received_nonce, sent_nonce,
+										received_init, sent_init,
+										reserved);
 		default:
 			return NULL;
 	}

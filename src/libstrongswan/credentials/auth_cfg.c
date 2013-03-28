@@ -23,7 +23,6 @@
 #include <eap/eap.h>
 #include <credentials/certificates/certificate.h>
 
-/**PACE implement GSPM - authentication method name + new AUTH RULE for different methods */
 ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_GSPM,
 	"any",
 	"public key",

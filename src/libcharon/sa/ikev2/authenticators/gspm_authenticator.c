@@ -12,8 +12,6 @@
  * for more details.
  */
 
-/** PACE authenticator implementation source */
-
 #include "gspm_authenticator.h"
 
 #include <daemon.h>
