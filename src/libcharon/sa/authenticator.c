@@ -111,7 +111,9 @@ authenticator_t *authenticator_create_verifier(
 										sent_nonce, received_init, reserved);
 		case AUTH_GSPM:
 			return (authenticator_t*)gspm_authenticator_create_verifier(ike_sa,
-										sent_nonce, received_init, reserved);
+										received_nonce, sent_nonce,
+										received_init, sent_init,
+										reserved);
 		default:
 			return NULL;
 	}

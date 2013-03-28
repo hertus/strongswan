@@ -22,10 +22,25 @@ typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
 /**
  * Private data of an gspm_authenticator_t object.
  */
-struct private_gspm_authenticator_t{
+struct private_gspm_authenticator_t
+{
 
 	/**
 	 * Public authenticator_t interface.
 	 */
 	gspm_authenticator_t public;
 };
+
+gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
+		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
+		chunk_t sent_init, char reserved[3])
+{
+	return &this->public;
+}
+
+gspm_authenticator_t *gspm_authenticator_create_verifier(ike_sa_t *ike_sa,
+		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
+		chunk_t sent_init, char reserved[3])
+{
+	return &this->public;
+}

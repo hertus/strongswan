@@ -26,7 +26,8 @@ typedef struct gspm_authenticator_t gspm_authenticator_t;
 
 #include <sa/authenticator.h>
 
-struct gspm_authenticator_t {
+struct gspm_authenticator_t
+{
 
 	/**
 	 * Implementation of authenticator_t using secure passwords.
@@ -45,7 +46,8 @@ struct gspm_authenticator_t {
  * @return                                      GSPM authenticator
  */
 gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
-		chunk_t received_nonce, chunk_t sent_init, char reserved[3]);
+		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
+		chunk_t sent_init, char reserved[3]);
 
 /**
  * Create an authenticator to verify secure passwords.
@@ -57,6 +59,7 @@ gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
  * @return                                      GSPM authenticator
  */
 gspm_authenticator_t *gspm_authenticator_create_verifier(ike_sa_t *ike_sa,
-		chunk_t sent_nonce, chunk_t received_init, char reserved[3]);
+		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
+		chunk_t sent_init, char reserved[3]);
 
 #endif /* GSPM_AUTHENTICATOR_H_ */
