@@ -25,6 +25,7 @@ encoding/payloads/delete_payload.c encoding/payloads/delete_payload.h \
 encoding/payloads/eap_payload.c encoding/payloads/eap_payload.h \
 encoding/payloads/encodings.c encoding/payloads/encodings.h \
 encoding/payloads/encryption_payload.c encoding/payloads/encryption_payload.h \
+encoding/payloads/gspm_payload.c encoding/payloads/gspm_payload.h \
 encoding/payloads/id_payload.c encoding/payloads/id_payload.h \
 encoding/payloads/ike_header.c encoding/payloads/ike_header.h \
 encoding/payloads/ke_payload.c  encoding/payloads/ke_payload.h \
@@ -80,8 +81,8 @@ libcharon_la_SOURCES += \
 sa/ikev2/keymat_v2.c sa/ikev2/keymat_v2.h \
 sa/ikev2/task_manager_v2.c sa/ikev2/task_manager_v2.h \
 sa/ikev2/authenticators/eap_authenticator.c sa/ikev2/authenticators/eap_authenticator.h \
-sa/ikev2/authenticators/psk_authenticator.c sa/ikev2/authenticators/psk_authenticator.h \
 sa/ikev2/authenticators/gspm_authenticator.c sa/ikev2/authenticators/gspm_authenticator.h \
+sa/ikev2/authenticators/psk_authenticator.c sa/ikev2/authenticators/psk_authenticator.h \
 sa/ikev2/authenticators/pubkey_authenticator.c sa/ikev2/authenticators/pubkey_authenticator.h \
 sa/ikev2/tasks/child_create.c sa/ikev2/tasks/child_create.h \
 sa/ikev2/tasks/child_delete.c sa/ikev2/tasks/child_delete.h \

@@ -1,9 +1,23 @@
 /*
- * gspm_payload.h
+ * Hochschule fuer Technik Rapperswil
  *
- *  Created on: Mar 29, 2013
- *      Author: hert
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
  */
+
+/**
+ * @defgroup gspm_payload gspm_payload
+ * @{ @ingroup payloads
+ */
+
+/** PACE authenticator implementation header */
 
 #ifndef GSPM_PAYLOAD_H_
 #define GSPM_PAYLOAD_H_
@@ -60,7 +74,7 @@ struct gspm_payload_t {
 	 * destroys a GSPM payload object
 	 *
 	 */
-	void (*destroy) (gspm_payload_t *this)
+	void (*destroy) (gspm_payload_t *this);
 };
 
 #endif /* GSPM_PAYLOAD_H_ */

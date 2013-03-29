@@ -575,7 +575,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	/** PACE new else AUTH CLASS */
 	else if (streq(auth, "gspm"))
 	{
-		cfg->add(cfg, AUTH_RULE_GSPM_PACE, AUTH_CLASS_GSPM);
+		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_GSPM);
 	}
 	else if (strneq(auth, "xauth", 5))
 	{

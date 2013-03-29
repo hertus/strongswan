@@ -1,9 +1,17 @@
 /*
- * gspm_payload.c
+ * Hochschule fuer Technik Rapperswil
  *
- *  Created on: Mar 29, 2013
- *      Author: hert
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
  */
+
 #include <stddef.h>
 #include "gspm_payload.h"
 
@@ -13,7 +21,8 @@
 typedef struct private_gspm_payload_t private_gspm_payload_t;
 
 /**
- * private part of a gspm_payload_t object
+ * Private part of a gspm_payload_t object.
+ *
  */
 struct private_gspm_payload_t {
 	/**
@@ -44,7 +53,7 @@ struct private_gspm_payload_t {
 	/**
 	 * GSPM-specific Data
 	 */
-	chunk_t gspm_data;
+	chunk_t data;
 
 };
 /**
@@ -102,7 +111,8 @@ static encoding_rule_t encodings[] = {
    * method-specific subtype field
  */
 
-METHOD(payload_t,has_subtype, bool, private_gspm_payload_t *this){
+METHOD(payload_t, has_subtype, bool, private_gspm_payload_t *this)
+{
 	//TODO
 	return true;
 }
@@ -153,21 +163,21 @@ METHOD(payload_t, get_length, size_t,
 METHOD(gspm_payload_t, set_data, void,
 	private_gspm_payload_t *this, chunk_t data)
 {
-	free(this->gspm_data.ptr);
-	this->gspm_data = chunk_clone(data);
-	this->payload_length = get_header_length(this) + this->gspm_data.len;
+	free(this->data.ptr);
+	this->data = chunk_clone(data);
+	this->payload_length = get_header_length(this) + this->data.len;
 }
 
 METHOD(gspm_payload_t, get_data, chunk_t,
 	private_gspm_payload_t *this)
 {
-	return this->gspm_data;
+	return this->data;
 }
 
 METHOD2(payload_t, gspm_payload_t, destroy, void,
 	private_gspm_payload_t *this)
 {
-	chunk_free(&this->gspm_data);
+	chunk_free(&this->data);
 	free(this);
 }
 

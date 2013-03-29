@@ -115,8 +115,6 @@ METHOD(authenticator_t, process_responder, status_t,
 METHOD(authenticator_t, destroy, void,
 		private_gspm_authenticator_t *this)
 {
-	DESTROY_IF(this->nonce);
-	DESTROY_IF(this->gspm_payload);
 	free(this);
 }
 

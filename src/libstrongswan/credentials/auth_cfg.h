@@ -109,8 +109,6 @@ enum auth_rule_t {
 	AUTH_RULE_SIGNATURE_SCHEME,
 	/** certificatePolicy constraint, numerical OID as char* */
 	AUTH_RULE_CERT_POLICY,
-	/** GSPM type to propose for secure password authentication method */
-	AUTH_RULE_GSPM_PACE,
 
 	/** intermediate certificate, certificate_t* */
 	AUTH_HELPER_IM_CERT,
