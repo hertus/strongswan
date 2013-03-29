@@ -31,6 +31,12 @@ struct private_gspm_authenticator_t
 	gspm_authenticator_t public;
 };
 
+METHOD(authenticator_t, destroy, void,
+	private_gspm_authenticator_t *this)
+{
+	free(this);
+}
+
 gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
 		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
 		chunk_t sent_init, char reserved[3])
