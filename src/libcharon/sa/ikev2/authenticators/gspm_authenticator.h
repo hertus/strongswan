@@ -26,6 +26,21 @@ typedef struct gspm_authenticator_t gspm_authenticator_t;
 
 #include <sa/authenticator.h>
 
+/**
+ * Implementation of authenticator_t using generic secure password method
+ *
+
+ Initiator                         						Responder
+ -------------------------------------------------------------------
+ HDR(SPIi=xxx, SPIr=0, IKE_SA_INIT,
+ Flags: Initiator, Message ID=0),
+ SAi1, KEi, Ni, [N(SECURE_PASSWORD_METHODS)]  -->
+
+ <--  HDR(SPIi=xxx, SPIr=yyy, IKE_SA_INIT,
+ Flags: Response, Message ID=0),
+ SAr1, KEr, Nr, [CERTREQ],
+
+ */
 struct gspm_authenticator_t
 {
 
@@ -37,13 +52,15 @@ struct gspm_authenticator_t
 };
 
 /**
- * Create an authenticator to build PSK signatures.
+ * Create an authenticator to authenticate against responder.
  *
  * @param ike_sa                        associated ike_sa
- * @param received_nonce        nonce received in IKE_SA_INIT
+ * @param received_nonce				nonce received in IKE_SA_INIT
+ * @param sent_nonce					nonce sent in IKE_SA_INIT
+ * @param received_init         		received IKE_SA_INIT message data
  * @param sent_init                     sent IKE_SA_INIT message data
  * @param reserved                      reserved bytes of ID payload
- * @return                                      GSPM authenticator
+ * @return                              GSPM authenticator
  */
 gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
 		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
@@ -53,10 +70,12 @@ gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
  * Create an authenticator to verify secure passwords.
  *
  * @param ike_sa                        associated ike_sa
- * @param sent_nonce            nonce sent in IKE_SA_INIT
- * @param received_init         received IKE_SA_INIT message data
+ * @param received_nonce				nonce received in IKE_SA_INIT
+ * @param sent_nonce					nonce sent in IKE_SA_INIT
+ * @param received_init         		received IKE_SA_INIT message data
+ * @param sent_init                     sent IKE_SA_INIT message data
  * @param reserved                      reserved bytes of ID payload
- * @return                                      GSPM authenticator
+ * @return                              GSPM authenticator
  */
 gspm_authenticator_t *gspm_authenticator_create_verifier(ike_sa_t *ike_sa,
 		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
