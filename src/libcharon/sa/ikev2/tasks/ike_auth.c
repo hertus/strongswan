@@ -380,7 +380,9 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 	return this->peer_cfg != NULL;
 }
 
-/**PACE build initiator auth payload + since here peer_cfg is built */
+/**PACE build initiator auth payload + since here peer_cfg is built
+ * in all METHODS add notify + control if GSPM AUTH
+ * */
 METHOD(task_t, build_i, status_t,
 	private_ike_auth_t *this, message_t *message)
 {

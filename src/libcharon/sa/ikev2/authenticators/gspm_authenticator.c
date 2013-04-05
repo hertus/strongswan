@@ -88,6 +88,14 @@ METHOD(authenticator_t, build_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM build_initiator");
+
+	/**TODO needs manager -> plugin -> to reach DH Object from bus via Listener
+
+	diffie_hellman_t dh;
+	dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
+
+	*/
+
 	return FAILED;
 }
 
