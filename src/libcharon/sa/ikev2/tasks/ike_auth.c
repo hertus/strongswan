@@ -390,9 +390,11 @@ static void get_gspm_member(private_ike_auth_t *this, message_t *message) {
 static chunk_t generate_gspm_init(private_ike_auth_t *this) {
 	DBG1(DBG_IKE, "GSPM generate notify payload");
 	notify_payload_t *notify_payload;
-	chunk_t *notify_data;
+	chunk_t notify_data;
 
-	return chunk_empty;
+	notify_data = chunk_create(0, sizeof(SECURE_PASSWORD_METHOD));
+
+	return notify_data;
 }
 
 /**
