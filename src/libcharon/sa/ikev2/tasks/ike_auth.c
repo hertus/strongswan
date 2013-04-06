@@ -25,6 +25,7 @@
 #include <encoding/payloads/eap_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <sa/ikev2/authenticators/eap_authenticator.h>
+#include <sa/ikev2/authenticators/gspm_authenticator.h>
 
 typedef struct private_ike_auth_t private_ike_auth_t;
 
@@ -168,6 +169,33 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 	/* keep a copy of the received packet */
 	this->other_packet = message->get_packet(message);
 	return NEED_MORE;
+}
+
+/**
+ * PACE check and add notify data for GSPM
+ */
+static bool has_notification(message_t *message)
+{
+	if (message->get_notify)
+	{
+		DBG1(DBG_IKE, "IKE_SA_INIT has notification payload");
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static bool gspm_auth_enabled(private_ike_auth_t *this, auth_cfg_t *cfg)
+{
+	if((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS) == AUTH_CLASS_GSPM)
+	{
+		DBG1(DBG_IKE, "IKE_SA_AUTH GSPM Auth enabled, needs notification");
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static chunk_t generate_gspm_init(private_ike_auth_t *this){
+
 }
 
 /**
@@ -390,6 +418,10 @@ METHOD(task_t, build_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
+		if(gspm_auth_enabled(this, cfg)){
+
+			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD, chunk_empty);
+		}
 		return collect_my_init_data(this, message);
 	}
 
@@ -522,6 +554,9 @@ METHOD(task_t, process_r, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
+		if(has_notification(message)){
+
+		}
 		return collect_other_init_data(this, message);
 	}
 
@@ -687,6 +722,9 @@ METHOD(task_t, build_r, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
+		if(has_notification(message) && gspm_auth_enabled(this, cfg)){
+
+		}
 		if (multiple_auth_enabled())
 		{
 			message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
@@ -865,6 +903,9 @@ METHOD(task_t, process_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
+		if(has_notification(message)){
+
+		}
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED) &&
 			multiple_auth_enabled())
 		{
