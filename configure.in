@@ -1157,6 +1157,7 @@ AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
+AM_CONDITIONAL(USE_GSPM_PACE, test x$gspm_pace = xtrue)
 
 #  hydra plugins
 # ---------------

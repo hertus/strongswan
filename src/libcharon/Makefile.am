@@ -598,3 +598,10 @@ if MONOLITHIC
   libcharon_la_LIBADD += plugins/xauth_pam/libstrongswan-xauth-pam.la
 endif
 endif
+
+if USE_GSPM_PACE
+  SUBDIRS += plugins/gspm_pace
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/gspm_pace/libstrongswan-gspm-pace.la
+endif
+endif

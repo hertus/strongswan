@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

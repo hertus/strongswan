@@ -1,6 +1,4 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
- * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
