@@ -424,7 +424,7 @@ static void get_gspm_member(private_ike_auth_t *this, message_t *message)
 	DBG1(DBG_IKE, "GSPM getting payload members");
 	notify_payload_t *notify_payload;
 	chunk_t data;
-	uint16_t method;
+	u_int16_t method;
 
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 	data = notify_payload->get_notification_data(notify_payload);
@@ -451,7 +451,7 @@ static chunk_t generate_gspm_init(private_ike_auth_t *this)
 	 * 3	Secure PSK Authentication
 	 *
 	 * */
-	uint16_t method;
+	u_int16_t method;
 	method = 1;
 
 	chunk = chunk_from_thing(method);
