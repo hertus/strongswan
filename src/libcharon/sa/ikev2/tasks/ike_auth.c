@@ -383,6 +383,7 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 
 /**
  * PACE check and add notify data for GSPM
+ * on process_r - peer_cfg is null, my_auth also null, no auth_cfg available
  */
 
 static bool gspm_auth_enabled(private_ike_auth_t *this)
@@ -400,34 +401,17 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 	if(pcfg)
 	{
 		auth_enum = pcfg->create_auth_cfg_enumerator(pcfg, TRUE);
-		if(auth_enum)
+		while (auth_enum->enumerate(auth_enum, &acfg))
 		{
-			while (auth_enum->enumerate(auth_enum, &acfg))
+			ar = (uintptr_t) acfg->get(acfg, AUTH_RULE_AUTH_CLASS);
+			if (ar == AUTH_CLASS_GSPM)
 			{
-				ar = (uintptr_t) acfg->get(acfg, AUTH_RULE_AUTH_CLASS);
-				if (ar == AUTH_CLASS_GSPM)
-				{
-					DBG1(DBG_IKE, "GSPM AUTH_CLASS found");
-					found = TRUE;
-					break;
-				}
+				DBG1(DBG_IKE, "GSPM AUTH_CLASS found");
+				found = TRUE;
+				break;
 			}
-			auth_enum->destroy(auth_enum);
 		}
-		else
-		{
-			DBG1(DBG_IKE, "GSPM AUTH check auth_enum was null");
-		}
-	}
-	else
-	{
-		DBG1(DBG_IKE, "GSPM AUTH check pcfg was null");
-		auth_enum = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, TRUE);
-	}
-
-	acfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	if(this->my_auth == NULL){
-		DBG1(DBG_IKE, "GSPM AUTH my_auth is null");
+		auth_enum->destroy(auth_enum);
 	}
 	return found;
 }
@@ -440,7 +424,7 @@ static void get_gspm_member(private_ike_auth_t *this, message_t *message)
 	DBG1(DBG_IKE, "GSPM getting payload members");
 	notify_payload_t *notify_payload;
 	chunk_t data;
-	int16_t method;
+	uint16_t method;
 
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 	data = notify_payload->get_notification_data(notify_payload);
@@ -467,7 +451,7 @@ static chunk_t generate_gspm_init(private_ike_auth_t *this)
 	 * 3	Secure PSK Authentication
 	 *
 	 * */
-	int16_t method;
+	uint16_t method;
 	method = 1;
 
 	chunk = chunk_from_thing(method);
@@ -634,10 +618,7 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify_i from found");
-			if (gspm_auth_enabled(this))
-			{
-				get_gspm_member(this, message);
-			}
+			get_gspm_member(this, message);
 		}
 		return collect_other_init_data(this, message);
 	}
