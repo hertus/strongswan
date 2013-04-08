@@ -628,7 +628,7 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify_i from found");
-			if (gspm_auth_enabled(this))
+			if (gspm_auth_enabled_responder(this))
 			{
 				get_gspm_member(this, message);
 			}
