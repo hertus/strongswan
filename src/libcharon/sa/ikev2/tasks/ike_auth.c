@@ -387,6 +387,7 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 
 static bool gspm_auth_enabled(private_ike_auth_t *this)
 {
+	DBG1(DBG_IKE, "GSPM AUTH check config");
 	peer_cfg_t *pcfg;
 	auth_cfg_t *acfg;
 	enumerator_t *auth_enum;
@@ -476,12 +477,12 @@ METHOD(task_t, build_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/** PACE build and add GSPM notify if necessary*/
+		/** PACE build and add GSPM notify if necessary
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
 					generate_gspm_init(this));
-		}
+		}*/
 
 		return collect_my_init_data(this, message);
 	}
@@ -615,14 +616,15 @@ METHOD(task_t, process_r, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE process notify and get gspm members in IKE_INIT*/
+		/**PACE process notify and get gspm members in IKE_INIT
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
+			DBG1(DBG_IKE, "SECURE PASSWOR METHOD Type in Notify found");
 			if (gspm_auth_enabled(this))
 			{
 				get_gspm_member(this, message);
 			}
-		}
+		}*/
 		return collect_other_init_data(this, message);
 	}
 
@@ -788,12 +790,12 @@ METHOD(task_t, build_r, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE build notify responder with choosen method*/
+		/**PACE build notify responder with choosen method
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
 								generate_gspm_init(this));
-		}
+		}*/
 		if (multiple_auth_enabled())
 		{
 			message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
@@ -972,12 +974,12 @@ METHOD(task_t, process_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE get notify from responder back to choose method*/
+		/**PACE get notify from responder back to choose method
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			get_gspm_member(this, message);
 			choose_secure_password_method(this);
-		}
+		}*/
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED) &&
 			multiple_auth_enabled())
 		{
