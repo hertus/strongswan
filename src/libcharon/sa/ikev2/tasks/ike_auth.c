@@ -394,13 +394,12 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 	uintptr_t ar;
 	bool found;
 
+	found = FALSE;
 	pcfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	auth_enum = pcfg->create_auth_cfg_enumerator(pcfg, TRUE);
 
 	while (auth_enum->enumerate(auth_enum, &acfg))
 	{
-		found = FALSE;
-
 		ar = (uintptr_t) acfg->get(acfg, AUTH_RULE_AUTH_CLASS);
 
 		if (ar == AUTH_CLASS_GSPM)
@@ -412,9 +411,6 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 	}
 
 	auth_enum->destroy(auth_enum);
-	acfg->destroy(acfg);
-	pcfg->destroy(pcfg);
-
 	return found;
 }
 
@@ -477,12 +473,12 @@ METHOD(task_t, build_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/** PACE build and add GSPM notify if necessary
+		/** PACE build and add GSPM notify if necessary*/
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
 					generate_gspm_init(this));
-		}*/
+		}
 
 		return collect_my_init_data(this, message);
 	}
@@ -616,15 +612,15 @@ METHOD(task_t, process_r, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE process notify and get gspm members in IKE_INIT
+		/**PACE process notify and get gspm members in IKE_INIT */
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
-			DBG1(DBG_IKE, "SECURE PASSWOR METHOD Type in Notify found");
+			DBG1(DBG_IKE, "GSPM Type in notify_i from found");
 			if (gspm_auth_enabled(this))
 			{
 				get_gspm_member(this, message);
 			}
-		}*/
+		}
 		return collect_other_init_data(this, message);
 	}
 
@@ -790,12 +786,12 @@ METHOD(task_t, build_r, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE build notify responder with choosen method
+		/**PACE build notify responder with choosen method*/
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
 								generate_gspm_init(this));
-		}*/
+		}
 		if (multiple_auth_enabled())
 		{
 			message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
@@ -974,12 +970,13 @@ METHOD(task_t, process_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE get notify from responder back to choose method
+		/**PACE get notify from responder back to choose method*/
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
+			DBG1(DBG_IKE, "GSPM Type in notify_i from found");
 			get_gspm_member(this, message);
 			choose_secure_password_method(this);
-		}*/
+		}
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED) &&
 			multiple_auth_enabled())
 		{
