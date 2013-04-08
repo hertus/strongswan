@@ -341,25 +341,19 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict) {
 /**
  * PACE check and add notify data for GSPM
  */
-static bool has_notification(message_t *message) {
-	if (message->get_notify) {
-		DBG1(DBG_IKE, "GSPM has notification payload");
-		return TRUE;
-	}
-	return FALSE;
-}
 
 static bool gspm_auth_enabled(private_ike_auth_t *this) {
 	peer_cfg_t *pcfg;
 	auth_cfg_t *acfg;
-	enumerator_t *e;
-	uintptr_t *ar;
+	enumerator_t *auth_enum;
+	uintptr_t ar;
 	bool found;
 
 	pcfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	e = pcfg->create_auth_cfg_enumerator(pcfg, TRUE);
+	auth_enum = pcfg->create_auth_cfg_enumerator(pcfg, TRUE);
 
-	while (e->enumerate(e, &acfg)) {
+
+	while (auth_enum->enumerate(auth_enum, &acfg)) {
 		found = FALSE;
 
 		ar = (uintptr_t) acfg->get(acfg, AUTH_RULE_AUTH_CLASS);
@@ -370,7 +364,10 @@ static bool gspm_auth_enabled(private_ike_auth_t *this) {
 			break;
 		}
 	}
-	e->destroy(e);
+
+	auth_enum->destroy(auth_enum);
+	acfg->destroy(acfg);
+	pcfg->destroy(pcfg);
 
 	return found;
 }
@@ -381,20 +378,39 @@ static bool gspm_auth_enabled(private_ike_auth_t *this) {
 static void get_gspm_member(private_ike_auth_t *this, message_t *message) {
 	DBG1(DBG_IKE, "GSPM getting payload members");
 	notify_payload_t *notify_payload;
-	chunk_t notify_data;
+	chunk_t data;
+	int16_t method;
 
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
-	notify_data = notify_payload->get_notification_data(notify_payload);
+	data = notify_payload->get_notification_data(notify_payload);
+
+	method = ntohs(*(u_int16_t*)data.ptr);
+
+	if (method == 1){
+		DBG1(DBG_IKE, "method PACE found in notify");
+	}
 }
 
 static chunk_t generate_gspm_init(private_ike_auth_t *this) {
 	DBG1(DBG_IKE, "GSPM generate notify payload");
-	notify_payload_t *notify_payload;
-	chunk_t notify_data;
+	chunk_t chunk;
+	int16_t method;
 
-	notify_data = chunk_create(0, sizeof(SECURE_PASSWORD_METHOD));
+	/**secure password methods
+	 * we have to add all the supported methods later
+	 *
+	 * 0	Reserved
+	 * 1	P A C E
+	 * 2	AugPAKE
+	 * 3	Secure PSK Authentication
+	 *
+	 * */
+	method = 1;
 
-	return notify_data;
+	chunk = chunk_from_thing(method);
+	*(u_int16_t*)chunk.ptr = ntohs(method);
+
+	return chunk;
 }
 
 /**
@@ -531,6 +547,15 @@ METHOD(task_t, process_r, status_t,
 	identification_t *id;
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT) {
+
+		/**PACE process notify and get gspm members in IKE_INIT*/
+		if (message->get_notify(message, SECURE_PASSWORD_METHOD)) {
+			if (gspm_auth_enabled(this)) {
+				get_gspm_member(this, message);
+			} else {
+				return FAILED;
+			}
+		}
 		return collect_other_init_data(this, message);
 	}
 
@@ -557,14 +582,6 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, EAP_ONLY_AUTHENTICATION)) {
 			this->ike_sa->enable_extension(this->ike_sa,
 					EXT_EAP_ONLY_AUTHENTICATION);
-		}
-		/**PACE process notify and get gspm members*/
-		if (message->get_notify(message, SECURE_PASSWORD_METHOD)) {
-			if (gspm_auth_enabled(this)) {
-				get_gspm_member(this, message);
-			} else {
-				return FAILED;
-			}
 		}
 	}
 
