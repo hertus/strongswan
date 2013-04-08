@@ -396,6 +396,7 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 
 	found = FALSE;
 	pcfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+
 	if(pcfg)
 	{
 		auth_enum = pcfg->create_auth_cfg_enumerator(pcfg, TRUE);
@@ -411,6 +412,7 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 					break;
 				}
 			}
+			auth_enum->destroy(auth_enum);
 		}
 		else
 		{
@@ -420,9 +422,13 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 	else
 	{
 		DBG1(DBG_IKE, "GSPM AUTH check pcfg was null");
+		auth_enum = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, TRUE);
 	}
 
-	auth_enum->destroy(auth_enum);
+	acfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+	if(this->my_auth == NULL){
+		DBG1(DBG_IKE, "GSPM AUTH my_auth is null");
+	}
 	return found;
 }
 
