@@ -430,7 +430,6 @@ static void get_gspm_member(private_ike_auth_t *this, message_t *message)
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 	if(notify_payload)
 	{
-		DBG1(DBG_IKE, "GSPM notify payload available");
 		data = notify_payload->get_notification_data(notify_payload);
 		method = ntohs(*(u_int16_t*) data.ptr);
 		if (method == pace)
@@ -454,13 +453,11 @@ static chunk_t generate_gspm_init(private_ike_auth_t *this)
 	 * 3	Secure PSK Authentication
 	 *
 	 * */
-	u_int16_t method;
-	method = 1;
-
+	u_int16_t method = 1;
+	method = htons(method);
 	chunk = chunk_from_thing(method);
-	*(u_int16_t*) chunk.ptr = htons(method);
-
 	return chunk;
+
 }
 
 /**
