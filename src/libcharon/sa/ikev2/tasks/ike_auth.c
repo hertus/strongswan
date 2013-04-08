@@ -394,7 +394,6 @@ static void get_gspm_member(private_ike_auth_t *this, message_t *message) {
 static chunk_t generate_gspm_init(private_ike_auth_t *this) {
 	DBG1(DBG_IKE, "GSPM generate notify payload");
 	chunk_t chunk;
-	int16_t method;
 
 	/**secure password methods
 	 * we have to add all the supported methods later
@@ -405,10 +404,11 @@ static chunk_t generate_gspm_init(private_ike_auth_t *this) {
 	 * 3	Secure PSK Authentication
 	 *
 	 * */
+	int16_t method;
 	method = 1;
 
 	chunk = chunk_from_thing(method);
-	*(u_int16_t*)chunk.ptr = ntohs(method);
+	*(u_int16_t*)chunk.ptr = htons(method);
 
 	return chunk;
 }
@@ -425,6 +425,7 @@ METHOD(task_t, build_i, status_t,
 	auth_cfg_t *cfg;
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT) {
+
 		/** PACE build and add GSPM notify if necessary*/
 		if (gspm_auth_enabled(this)) {
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
@@ -552,8 +553,6 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD)) {
 			if (gspm_auth_enabled(this)) {
 				get_gspm_member(this, message);
-			} else {
-				return FAILED;
 			}
 		}
 		return collect_other_init_data(this, message);
@@ -847,8 +846,7 @@ METHOD(task_t, process_i, status_t,
 	bool mutual_eap = FALSE;
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT) {
-		if (message->get_notify(message, SECURE_PASSWORD_METHOD)
-				&& gspm_auth_enabled(this)) {
+		if (message->get_notify(message, SECURE_PASSWORD_METHOD)) {
 			get_gspm_member(this, message);
 			choose_secure_password_method(this);
 		}
