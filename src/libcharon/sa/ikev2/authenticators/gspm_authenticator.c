@@ -22,6 +22,13 @@
 
 typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
 
+ENUM(gspm_member_names, GSPM_RESERVED, GSPM_SPSKA,
+	"GSPM_RESERVED",
+	"GSPM_PACE",
+	"GSPM_AUGPAKE",
+	"GSPM_SPSKA",
+);
+
 /**
  * Private data of an gspm_authenticator_t object.
  */

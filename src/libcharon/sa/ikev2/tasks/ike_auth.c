@@ -113,6 +113,11 @@ struct private_ike_auth_t {
 	 * received an INITIAL_CONTACT?
 	 */
 	bool initial_contact;
+
+	/**
+	 * choosen GSPM member from initiator
+	 */
+	u_int16_t gspm_member;
 };
 
 /**
@@ -388,7 +393,6 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 
 static bool gspm_auth_enabled(private_ike_auth_t *this)
 {
-	DBG1(DBG_IKE, "GSPM AUTH check config");
 	peer_cfg_t *pcfg;
 	auth_cfg_t *acfg;
 	enumerator_t *auth_enum;
@@ -397,7 +401,6 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 
 	found = FALSE;
 	pcfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-
 	if(pcfg)
 	{
 		auth_enum = pcfg->create_auth_cfg_enumerator(pcfg, TRUE);
@@ -406,12 +409,16 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 			ar = (uintptr_t) acfg->get(acfg, AUTH_RULE_AUTH_CLASS);
 			if (ar == AUTH_CLASS_GSPM)
 			{
-				DBG1(DBG_IKE, "GSPM AUTH_CLASS found");
+				DBG1(DBG_IKE, "GSPM AUTH_CLASS_GSPM found");
 				found = TRUE;
 				break;
 			}
 		}
 		auth_enum->destroy(auth_enum);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "GSPM AUTH_CLASS peer_cfg was null");
 	}
 	return found;
 }
@@ -421,51 +428,50 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
  */
 static void get_gspm_member(private_ike_auth_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM getting payload members");
 	notify_payload_t *notify_payload;
+	linked_list_t *gspm_method_list;
+	enumerator_t *enumerator;
+	u_int16_t gm;
 	chunk_t data;
-	u_int16_t method, pace;
+	u_int16_t method;
 
-	pace = 1;
+	gspm_method_list = linked_list_create();
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 	if(notify_payload)
 	{
 		data = notify_payload->get_notification_data(notify_payload);
 		method = ntohs(*(u_int16_t*) data.ptr);
-		if (method == pace)
+		if (method == (u_int16_t) GSPM_PACE)
 		{
-			DBG1(DBG_IKE, "method PACE found in notify");
+			DBG1(DBG_IKE, "GSPM PACE found in notify");
+			gspm_method_list->insert_last(gspm_method_list, (u_int16_t*) GSPM_PACE);
+			this->gspm_member = (u_int16_t) GSPM_PACE;
 		}
+
+		/** enumerate list, add and choose methods
+		 *
+
+		enumerator = gspm_method_list->create_enumerator(gspm_method_list);
+		while (enumerator->enumerate(enumerator, &gm))
+		{
+			if(gm == GSPM_PACE)
+			{
+			this->gspm_member = (u_int16_t) GSPM_PACE;
+			}
+		}
+		enumerator->destroy(enumerator);
+		 */
 	}
 }
 
 static chunk_t generate_gspm_init(private_ike_auth_t *this)
 {
-	DBG1(DBG_IKE, "GSPM generate notify payload");
 	chunk_t chunk;
 
-	/**secure password methods
-	 * we have to add all the supported methods later
-	 *
-	 * 0	Reserved
-	 * 1	P A C E
-	 * 2	AugPAKE
-	 * 3	Secure PSK Authentication
-	 *
-	 * */
-	u_int16_t method = 1;
+	u_int16_t method = (u_int16_t) GSPM_PACE;
 	method = htons(method);
 	chunk = chunk_from_thing(method);
 	return chunk;
-
-}
-
-/**
- * choose a GSPM secure password method from available members
- */
-static void choose_secure_password_method(private_ike_auth_t *this)
-{
-
 }
 
 METHOD(task_t, build_i, status_t,
@@ -786,8 +792,9 @@ METHOD(task_t, build_r, status_t,
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		/**PACE build notify responder with choosen method*/
-		if (gspm_auth_enabled(this))
+		if (this->gspm_member)
 		{
+			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_member: %d", this->gspm_member);
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
 								generate_gspm_init(this));
 		}
@@ -972,9 +979,8 @@ METHOD(task_t, process_i, status_t,
 		/**PACE get notify from responder back to choose method*/
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
-			DBG1(DBG_IKE, "GSPM Type in notify_i from found");
+			DBG1(DBG_IKE, "GSPM Type in notify_i from responder found");
 			get_gspm_member(this, message);
-			choose_secure_password_method(this);
 		}
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED) &&
 			multiple_auth_enabled())
