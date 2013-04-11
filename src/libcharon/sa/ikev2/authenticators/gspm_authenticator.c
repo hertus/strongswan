@@ -95,6 +95,8 @@ METHOD(authenticator_t, build_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM build_initiator");
+	auth_payload_t *auth_payload;
+	chunk_t auth_data;
 
 	/**TODO needs manager -> plugin -> to reach DH Object from bus via Listener
 
@@ -103,28 +105,43 @@ METHOD(authenticator_t, build_initiator, status_t,
 
 	*/
 
-	return FAILED;
+	auth_payload = auth_payload_create();
+	auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
+	auth_payload->set_data(auth_payload, auth_data);
+	chunk_free(&auth_data);
+	message->add_payload(message, (payload_t*)auth_payload);
+
+	return NEED_MORE;
 }
 
 METHOD(authenticator_t, process_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM process_initiator");
-	return FAILED;
+	return SUCCESS;
 }
 
 METHOD(authenticator_t, build_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM build_responder");
-	return FAILED;
+	auth_payload_t *auth_payload;
+	chunk_t auth_data;
+
+	auth_payload = auth_payload_create();
+	auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
+	auth_payload->set_data(auth_payload, auth_data);
+	chunk_free(&auth_data);
+	message->add_payload(message, (payload_t*)auth_payload);
+
+	return NEED_MORE;
 }
 
 METHOD(authenticator_t, process_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM process_responder");
-	return FAILED;
+	return SUCCESS;
 }
 
 METHOD(authenticator_t, destroy, void,
