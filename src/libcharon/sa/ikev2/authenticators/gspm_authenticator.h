@@ -27,21 +27,6 @@ typedef enum gspm_member_t gspm_member_t;
 
 #include <sa/authenticator.h>
 
-/**secure password methods
- *
- * 0	Reserved
- * 1	P A C E
- * 2	AugPAKE
- * 3	Secure PSK Authentication
- * ...
- * */
-enum gspm_member_t {
-	GSPM_RESERVED = 0,
-	GSPM_PACE = 1,
-	GSPM_AUGPAKE = 2,
-	GSPM_SPSKA = 3,
-};
-
 /**
  * enum names for gspm_member_t.
  */

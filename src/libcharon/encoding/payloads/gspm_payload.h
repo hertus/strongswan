@@ -77,4 +77,11 @@ struct gspm_payload_t {
 	void (*destroy) (gspm_payload_t *this);
 };
 
+/**
+ * Creates an empty gspm_payload_t object.
+ *
+ * @return gspm_payload_t object
+ */
+gspm_payload_t *gspm_payload_create(void);
+
 #endif /* GSPM_PAYLOAD_H_ */

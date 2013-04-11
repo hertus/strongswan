@@ -22,13 +22,6 @@
 
 typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
 
-ENUM(gspm_member_names, GSPM_RESERVED, GSPM_SPSKA,
-	"GSPM_RESERVED",
-	"GSPM_PACE",
-	"GSPM_AUGPAKE",
-	"GSPM_SPSKA",
-);
-
 /**
  * Private data of an gspm_authenticator_t object.
  */
@@ -96,7 +89,6 @@ METHOD(authenticator_t, build_initiator, status_t,
 	DBG1(DBG_IKE, "GSPM build_initiator");
 	auth_payload_t *auth_payload;
 	gspm_payload_t *gspm_payload;
-	u_int32_t thing;
 	chunk_t auth_data;
 	chunk_t gspm_data;
 
@@ -117,10 +109,10 @@ METHOD(authenticator_t, build_initiator, status_t,
 		return SUCCESS;
 	}
 
-	thing = 42;
-	gspm_data = chunk_from_thing(thing);
+	gspm_data = chunk_empty;
 	gspm_payload = gspm_payload_create();
 	gspm_payload->set_data(gspm_payload, gspm_data);
+	chunk_free(&gspm_data);
 	message->add_payload(message, (payload_t*)gspm_payload);
 
 	return NEED_MORE;
@@ -154,6 +146,7 @@ METHOD(authenticator_t, build_responder, status_t,
 
 	gspm_payload = gspm_payload_create();
 	gspm_payload->set_data(gspm_payload, gspm_data);
+	chunk_free(&gspm_data);
 	message->add_payload(message, (payload_t*)gspm_payload);
 
 	return NEED_MORE;

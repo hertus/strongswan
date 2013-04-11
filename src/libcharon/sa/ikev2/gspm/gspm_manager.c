@@ -15,10 +15,17 @@
 #include "gspm_manager.h"
 
 #include <collections/linked_list.h>
-#include <threading/rwlock.h>
+#include <src/libcharon/encoding/payloads/notify_payload.h>
 
 typedef struct private_gspm_manager_t private_gspm_manager_t;
 typedef struct gspm_entry_t gspm_entry_t;
+
+ENUM(gspm_member_names, GSPM_RESERVED, GSPM_SPSKA,
+	"GSPM_RESERVED",
+	"GSPM_PACE",
+	"GSPM_AUGPAKE",
+	"GSPM_SPSKA",
+);
 
 /**
  * GSPM constructor entry
@@ -43,6 +50,79 @@ METHOD(gspm_manager_t, destroy, void,
 	free(this);
 }
 
+chunk_t gspm_generate_chunk()
+{
+	chunk_t chunk;
+	u_int16_t method;
+
+	method = GSPM_PACE;
+	method = htons(method);
+	chunk = chunk_from_thing(method);
+
+	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
+	return chunk_clone(chunk);
+}
+
+chunk_t gspm_generate_chunk_from_member(u_int16_t member)
+{
+	chunk_t chunk;
+	u_int16_t method;
+
+	method = member;
+	method = htons(method);
+	chunk = chunk_from_thing(method);
+
+	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
+	return chunk_clone(chunk);
+}
+
+u_int16_t gspm_select_member(message_t *message, bool initiator){
+	notify_payload_t *notify_payload;
+	linked_list_t *gspm_method_list;
+	chunk_t data;
+	u_int16_t method;
+
+	if(initiator)
+	{
+		notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
+		data = notify_payload->get_notification_data(notify_payload);
+		method = ntohs(*(u_int16_t*) data.ptr);
+		return method;
+	}
+	else
+	{
+		gspm_method_list = linked_list_create();
+		notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
+		if(notify_payload)
+		{
+			notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
+			data = notify_payload->get_notification_data(notify_payload);
+			method = ntohs(*(u_int16_t*) data.ptr);
+			//TODO enumerate data + memberlist
+
+			if (method == GSPM_PACE)
+			{
+				gspm_method_list->insert_last(gspm_method_list, (u_int16_t*) GSPM_PACE);
+			}
+
+			/** enumerate list, add and choose methods -> MANAGER
+			 *
+
+			enumerator = gspm_method_list->create_enumerator(gspm_method_list);
+			while (enumerator->enumerate(enumerator, &gm))
+			{
+				if(gm == GSPM_PACE)
+				{
+				this->gspm_member = (u_int16_t) GSPM_PACE;
+				}
+			}
+			enumerator->destroy(enumerator);
+			 */
+		}
+	}
+	return 1;
+}
+
 gspm_manager_t *gspm_manager_create()
 {
 	private_gspm_manager_t *this;
@@ -51,8 +131,6 @@ gspm_manager_t *gspm_manager_create()
 			.public = {
 				.destroy = _destroy,
 			},
-			.methods = linked_list_create(),
-			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	return &this->public;

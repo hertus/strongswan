@@ -24,6 +24,7 @@
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/eap_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <sa/ikev2/gspm/gspm_manager.h>
 #include <sa/ikev2/authenticators/eap_authenticator.h>
 #include <sa/ikev2/authenticators/gspm_authenticator.h>
 
@@ -423,61 +424,6 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 	return found;
 }
 
-/**
- * get GSPM members from notification
- */
-static void get_gspm_member(private_ike_auth_t *this, message_t *message)
-{
-	notify_payload_t *notify_payload;
-	linked_list_t *gspm_method_list;
-	enumerator_t *enumerator;
-	u_int16_t gm;
-	chunk_t data;
-	u_int16_t method;
-
-	gspm_method_list = linked_list_create();
-	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
-	if(notify_payload)
-	{
-		data = notify_payload->get_notification_data(notify_payload);
-		method = ntohs(*(u_int16_t*) data.ptr);
-		if (method == (u_int16_t) GSPM_PACE)
-		{
-			DBG1(DBG_IKE, "GSPM PACE found in notify");
-			gspm_method_list->insert_last(gspm_method_list, (u_int16_t*) GSPM_PACE);
-			this->gspm_member = (u_int16_t) GSPM_PACE;
-		}
-
-		/** enumerate list, add and choose methods
-		 *
-
-		enumerator = gspm_method_list->create_enumerator(gspm_method_list);
-		while (enumerator->enumerate(enumerator, &gm))
-		{
-			if(gm == GSPM_PACE)
-			{
-			this->gspm_member = (u_int16_t) GSPM_PACE;
-			}
-		}
-		enumerator->destroy(enumerator);
-		 */
-	}
-}
-
-static chunk_t generate_gspm_init()
-{
-	chunk_t chunk;
-	u_int16_t method;
-
-	method = GSPM_PACE;
-	method = htons(method);
-	chunk = chunk_from_thing(method);
-
-	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
-	return chunk_clone(chunk);
-}
-
-
 METHOD(task_t, build_i, status_t,
 	private_ike_auth_t *this, message_t *message)
 {
@@ -489,7 +435,7 @@ METHOD(task_t, build_i, status_t,
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
-					generate_gspm_init());
+					gspm_generate_chunk());
 		}
 
 		return collect_my_init_data(this, message);
@@ -628,7 +574,7 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify from initiator found");
-			get_gspm_member(this, message);
+			this->gspm_member = gspm_select_member(message, FALSE);
 		}
 		return collect_other_init_data(this, message);
 	}
@@ -808,7 +754,7 @@ METHOD(task_t, build_r, status_t,
 		{
 			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_member: %d", this->gspm_member);
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
-					generate_gspm_init());
+					gspm_generate_chunk_from_member(this->gspm_member));
 		}
 		return collect_my_init_data(this, message);
 	}
@@ -987,7 +933,7 @@ METHOD(task_t, process_i, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify from responder found");
-			get_gspm_member(this, message);
+			this->gspm_member = gspm_select_member(message, TRUE);
 		}
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED) &&
 			multiple_auth_enabled())

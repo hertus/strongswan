@@ -24,11 +24,31 @@
 
 typedef struct gspm_manager_t gspm_manager_t;
 
-struct gspm_manager_t {
+#include <utils/chunk.h>
+#include <src/libcharon/encoding/message.h>
 
+/**secure password methods
+ *
+ * 0	Reserved
+ * 1	P A C E
+ * 2	AugPAKE
+ * 3	Secure PSK Authentication
+ * ...
+ * */
+enum gspm_member_t {
+	GSPM_RESERVED = 0,
+	GSPM_PACE = 1,
+	GSPM_AUGPAKE = 2,
+	GSPM_SPSKA = 3,
+};
+
+struct gspm_manager_t {
 	void (*destroy)(gspm_manager_t *this);
 };
 
+chunk_t gspm_generate_chunk();
+chunk_t gspm_generate_chunk_from_member(u_int16_t member);
+u_int16_t gspm_select_member(message_t *message, bool initiator);
 gspm_manager_t *gspm_manager_create();
 
 #endif /** GSPM_MANAGER_H_ @}*/

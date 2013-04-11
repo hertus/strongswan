@@ -178,6 +178,9 @@ METHOD2(payload_t, gspm_payload_t, destroy, void,
 	free(this);
 }
 
+/*
+ * Described in header
+ */
 gspm_payload_t *gspm_payload_create()
 {
 	private_gspm_payload_t *this;
