@@ -474,7 +474,7 @@ static chunk_t generate_gspm_init()
 	chunk = chunk_from_thing(method);
 
 	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
-	return chunk_clonea(chunk);
+	return chunk_clone(chunk);
 }
 
 
