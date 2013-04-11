@@ -76,15 +76,14 @@ struct private_gspm_authenticator_t
 	chunk_t nonce;
 
 	/**
-	 * generated GSPM Payload
-	 */
-	gspm_payload_t *gspm_payload;
-
-	/**
 	 * KE2 ephemeral public key from DH
 	 */
 	ke_payload_t *ke_payload;
 
+	/**
+	 * round#2 of method_pace
+	 */
+	bool round2;
 };
 
 /*
@@ -96,7 +95,10 @@ METHOD(authenticator_t, build_initiator, status_t,
 {
 	DBG1(DBG_IKE, "GSPM build_initiator");
 	auth_payload_t *auth_payload;
+	gspm_payload_t *gspm_payload;
+	u_int32_t thing;
 	chunk_t auth_data;
+	chunk_t gspm_data;
 
 	/**TODO needs manager -> plugin -> to reach DH Object from bus via Listener
 
@@ -104,12 +106,22 @@ METHOD(authenticator_t, build_initiator, status_t,
 	dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
 
 	*/
+	if(this->round2)
+	{
+		auth_payload = auth_payload_create();
+		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
+		auth_payload->set_data(auth_payload, auth_data);
+		chunk_free(&auth_data);
+		message->add_payload(message, (payload_t*)auth_payload);
 
-	auth_payload = auth_payload_create();
-	auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
-	auth_payload->set_data(auth_payload, auth_data);
-	chunk_free(&auth_data);
-	message->add_payload(message, (payload_t*)auth_payload);
+		return SUCCESS;
+	}
+
+	thing = 42;
+	gspm_data = chunk_from_thing(thing);
+	gspm_payload = gspm_payload_create();
+	gspm_payload->set_data(gspm_payload, gspm_data);
+	message->add_payload(message, (payload_t*)gspm_payload);
 
 	return NEED_MORE;
 }
@@ -126,13 +138,23 @@ METHOD(authenticator_t, build_responder, status_t,
 {
 	DBG1(DBG_IKE, "GSPM build_responder");
 	auth_payload_t *auth_payload;
+	gspm_payload_t *gspm_payload;
 	chunk_t auth_data;
+	chunk_t gspm_data;
 
-	auth_payload = auth_payload_create();
-	auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
-	auth_payload->set_data(auth_payload, auth_data);
-	chunk_free(&auth_data);
-	message->add_payload(message, (payload_t*)auth_payload);
+	if(this->round2)
+	{
+		auth_payload = auth_payload_create();
+		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
+		auth_payload->set_data(auth_payload, auth_data);
+		chunk_free(&auth_data);
+		message->add_payload(message, (payload_t*)auth_payload);
+		return SUCCESS;
+	}
+
+	gspm_payload = gspm_payload_create();
+	gspm_payload->set_data(gspm_payload, gspm_data);
+	message->add_payload(message, (payload_t*)gspm_payload);
 
 	return NEED_MORE;
 }

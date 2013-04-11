@@ -464,15 +464,19 @@ static void get_gspm_member(private_ike_auth_t *this, message_t *message)
 	}
 }
 
-static chunk_t generate_gspm_init(private_ike_auth_t *this)
+static chunk_t generate_gspm_init()
 {
 	chunk_t chunk;
+	u_int16_t method;
 
-	u_int16_t method = (u_int16_t) GSPM_PACE;
+	method = GSPM_PACE;
 	method = htons(method);
 	chunk = chunk_from_thing(method);
-	return chunk;
+
+	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
+	return chunk_clonea(chunk);
 }
+
 
 METHOD(task_t, build_i, status_t,
 	private_ike_auth_t *this, message_t *message)
@@ -485,7 +489,7 @@ METHOD(task_t, build_i, status_t,
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
-					generate_gspm_init(this));
+					generate_gspm_init());
 		}
 
 		return collect_my_init_data(this, message);
@@ -685,8 +689,11 @@ METHOD(task_t, process_r, status_t,
 				return NEED_MORE;
 			}
 		}
+
+		/**PACE set GSPM method auth rule specified, alternative to EAP with AUTH==NULL */
 		if (message->get_payload(message, AUTHENTICATION) == NULL)
 		{	/* before authenticating with EAP, we need a EAP config */
+			DBG1(DBG_IKE, "GSPM AUTH is NULL");
 			cand = get_auth_cfg(this, FALSE);
 			while (!cand || (
 					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_TYPE) == EAP_NAK &&
@@ -801,7 +808,7 @@ METHOD(task_t, build_r, status_t,
 		{
 			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_member: %d", this->gspm_member);
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
-								generate_gspm_init(this));
+					generate_gspm_init());
 		}
 		return collect_my_init_data(this, message);
 	}

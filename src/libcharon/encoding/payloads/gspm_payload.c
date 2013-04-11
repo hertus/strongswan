@@ -12,10 +12,8 @@
  * for more details.
  */
 
-#include <stddef.h>
 #include "gspm_payload.h"
 
-#include <daemon.h>
 #include <bio/bio_writer.h>
 
 typedef struct private_gspm_payload_t private_gspm_payload_t;
@@ -53,7 +51,7 @@ struct private_gspm_payload_t {
 	/**
 	 * GSPM-specific Data
 	 */
-	chunk_t data;
+	chunk_t gspm_data;
 
 };
 /**
@@ -64,22 +62,22 @@ struct private_gspm_payload_t {
  *
  */
 static encoding_rule_t encodings[] = {
-		/* 1 Byte next payload type, stored in the field next_payload */
-		{ U_INT_8,			offsetof(private_gspm_payload_t, next_payload) 	},
-		/* the critical bit */
-		{ FLAG,				offsetof(private_gspm_payload_t, critical) 		},
-		/* 7 Bit reserved bits, nowhere stored */
-		{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[0])	},
-		{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[1])	},
-		{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[2])	},
-		{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[3])	},
-		{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[4])	},
-		{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[5])	},
-		{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[6])	},
-		/* Length of the whole payload*/
-		{ PAYLOAD_LENGTH,	offsetof(private_gspm_payload_t, payload_length)	},
-		/* chunt to data, starting at "code" */
-		{ CHUNK_DATA,		offsetof(private_gspm_payload_t, data)			},
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_gspm_payload_t, next_payload) 	},
+	/* the critical bit */
+	{ FLAG,				offsetof(private_gspm_payload_t, critical) 		},
+	/* 7 Bit reserved bits, nowhere stored */
+	{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[0])	},
+	{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[1])	},
+	{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[2])	},
+	{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[3])	},
+	{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[4])	},
+	{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[5])	},
+	{ RESERVED_BIT,		offsetof(private_gspm_payload_t, reserved[6])	},
+	/* Length of the whole payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_gspm_payload_t, payload_length)},
+	/* chunt to data, starting at "code" */
+	{ CHUNK_DATA,		offsetof(private_gspm_payload_t, gspm_data)		},
 };
 
 
@@ -113,7 +111,6 @@ static encoding_rule_t encodings[] = {
 
 METHOD(payload_t, has_subtype, bool, private_gspm_payload_t *this)
 {
-	//TODO
 	return true;
 }
 
@@ -163,21 +160,21 @@ METHOD(payload_t, get_length, size_t,
 METHOD(gspm_payload_t, set_data, void,
 	private_gspm_payload_t *this, chunk_t data)
 {
-	free(this->data.ptr);
-	this->data = chunk_clone(data);
-	this->payload_length = get_header_length(this) + this->data.len;
+	free(this->gspm_data.ptr);
+	this->gspm_data = chunk_clone(data);
+	this->payload_length = get_header_length(this) + this->gspm_data.len;
 }
 
 METHOD(gspm_payload_t, get_data, chunk_t,
 	private_gspm_payload_t *this)
 {
-	return this->data;
+	return this->gspm_data;
 }
 
 METHOD2(payload_t, gspm_payload_t, destroy, void,
 	private_gspm_payload_t *this)
 {
-	chunk_free(&this->data);
+	chunk_free(&this->gspm_data);
 	free(this);
 }
 
