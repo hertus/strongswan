@@ -362,6 +362,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_GSPM_PACE
+  SUBDIRS += plugins/gspm_pace
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/gspm_pace/libstrongswan-gspm-pace.la
+endif
+endif
+
 if USE_TLS
 if MONOLITHIC
   # otherwise this library is linked to eap_tls
@@ -597,12 +604,5 @@ if USE_XAUTH_PAM
   SUBDIRS += plugins/xauth_pam
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/xauth_pam/libstrongswan-xauth-pam.la
-endif
-endif
-
-if USE_GSPM_PACE
-  SUBDIRS += plugins/gspm_pace
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/gspm_pace/libstrongswan-gspm-pace.la
 endif
 endif

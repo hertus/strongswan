@@ -17,8 +17,8 @@
  * @{ @ingroup gspm
  */
 
-#ifndef gspm_pace_listener_H_
-#define gspm_pace_listener_H_
+#ifndef GSPM_PACE_LISTENER_H_
+#define GSPM_PACE_LISTENER_H_
 
 #include <bus/listeners/listener.h>
 
@@ -45,4 +45,4 @@ struct gspm_pace_listener_t {
  */
 gspm_pace_listener_t *gspm_pace_listener_create();
 
-#endif /** gspm_pace_listener_H_ @}*/
+#endif /** GSPM_PACE_LISTENER_H_ @}*/

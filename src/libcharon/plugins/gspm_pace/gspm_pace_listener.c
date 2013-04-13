@@ -32,22 +32,17 @@ struct private_gspm_pace_listener_t {
 	 */
 	gspm_pace_listener_t public;
 
-	/**
-	 * Mutex
-	 */
-	mutex_t *mutex;
-
 };
 
-METHOD(listener_t, ike_state_change, bool,
-	private_gspm_pace_listener_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
-{
-	return TRUE;
-}
-
-METHOD(listener_t, message_hook, bool,
-	private_gspm_pace_listener_t *this, ike_sa_t *ike_sa,
-	message_t *message, bool incoming, bool plain)
+METHOD(listener_t, ike_keys, bool,
+	private_gspm_pace_listener_t *this,
+	ike_sa_t *ike_sa,
+	diffie_hellman_t *dh,
+	chunk_t dh_other,
+	chunk_t nonce_i,
+	chunk_t nonce_r,
+	ike_sa_t *rekey,
+	shared_key_t *shared)
 {
 	return TRUE;
 }
@@ -68,12 +63,10 @@ gspm_pace_listener_t *gspm_pace_listener_create()
 	INIT(this,
 		.public = {
 			.listener = {
-				.ike_state_change = _ike_state_change,
-				.message = _message_hook,
+				.ike_keys = _ike_keys,
 			},
 			.destroy = _destroy,
 		},
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	return &this->public;

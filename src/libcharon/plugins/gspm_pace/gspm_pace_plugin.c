@@ -13,28 +13,39 @@
  */
 
 #include "gspm_pace_plugin.h"
+#include "gspm_pace_listener.h"
 
 #include <daemon.h>
 
+typedef struct private_gspm_pace_plugin_t private_gspm_pace_plugin_t;
+
+/**
+ * private data of gspm_pace plugin
+ */
+struct private_gspm_pace_plugin_t {
+
+	/**
+	 * implements plugin interface
+	 */
+	gspm_pace_plugin_t public;
+
+	/**
+	 * Listener getting DH object
+	 */
+	gspm_pace_listener_t *listener;
+};
+
 METHOD(plugin_t, get_name, char*,
-	gspm_pace_plugin_t *this)
+		private_gspm_pace_plugin_t *this)
 {
 	return "gspm-pace";
 }
 
-METHOD(plugin_t, get_features, int,
-	gspm_pace_plugin_t *this, plugin_feature_t *features[])
-{
-	static plugin_feature_t f[] = {
-
-	};
-	*features = f;
-	return countof(f);
-}
-
 METHOD(plugin_t, destroy, void,
-	gspm_pace_plugin_t *this)
+		private_gspm_pace_plugin_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	this->listener->destroy(this->listener);
 	free(this);
 }
 
@@ -43,16 +54,22 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *gspm_pace_plugin_create()
 {
-	gspm_pace_plugin_t *this;
+	private_gspm_pace_plugin_t *this;
 
 	INIT(this,
-		.plugin = {
-			.get_name = _get_name,
-			.get_features = _get_features,
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
 		},
+		.listener = gspm_pace_listener_create(),
 	);
 
-	return &this->plugin;
+
+	charon->bus->add_listener(charon->bus, &this->listener->listener);
+
+	return &this->public.plugin;
 }
 
