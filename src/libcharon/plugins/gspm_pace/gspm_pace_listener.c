@@ -32,7 +32,34 @@ struct private_gspm_pace_listener_t {
 	 */
 	gspm_pace_listener_t public;
 
+	ike_sa_id_t *ike_sa_id;
+
 };
+
+METHOD(listener_t, message, bool,
+	private_gspm_pace_listener_t *this,
+	ike_sa_t *ike_sa,
+	message_t *message,
+	bool incoming,
+	bool plain)
+{
+	//this->ike_sa_id = message->get_ike_sa_id(message);
+	this->ike_sa_id = ike_sa->get_id(ike_sa);
+	if (
+			(message->get_exchange_type(message) == IKE_SA_INIT)
+			&&
+			(message->get_notify(message, SECURE_PASSWORD_METHOD))
+			&&
+			(this->ike_sa_id->get_initiator_spi(this->ike_sa_id))
+			&&
+			(this->ike_sa_id->get_responder_spi(this->ike_sa_id))
+		)
+	{
+		DBG1(DBG_IKE, "GSPM LISTENER sa_id_i is: %016llX", this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
+		DBG1(DBG_IKE, "GSPM LISTENER sa_id_r is: %016llX", this->ike_sa_id->get_responder_spi(this->ike_sa_id));
+	}
+	return TRUE;
+}
 
 METHOD(listener_t, ike_keys, bool,
 	private_gspm_pace_listener_t *this,
@@ -44,6 +71,9 @@ METHOD(listener_t, ike_keys, bool,
 	ike_sa_t *rekey,
 	shared_key_t *shared)
 {
+	if(ike_sa->get_id(ike_sa) == this->ike_sa_id){
+		DBG1(DBG_IKE, "GSPM LISTENER called ike_keys and same ID!");
+	}
 	return TRUE;
 }
 
@@ -64,6 +94,7 @@ gspm_pace_listener_t *gspm_pace_listener_create()
 		.public = {
 			.listener = {
 				.ike_keys = _ike_keys,
+				.message = _message,
 			},
 			.destroy = _destroy,
 		},
