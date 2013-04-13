@@ -19,6 +19,7 @@
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/gspm_payload.h>
+#include <sa/ikev2/gspm/gspm_manager.h>
 
 typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
 
@@ -77,6 +78,11 @@ struct private_gspm_authenticator_t
 	 * round#2 of method_pace
 	 */
 	bool round2;
+
+	/**
+	 * selected GSPM method from IKE_SA_INIT via auth_cfg
+	 */
+	u_int16_t method;
 };
 
 /*
@@ -86,11 +92,19 @@ struct private_gspm_authenticator_t
 METHOD(authenticator_t, build_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM build_initiator");
+	DBG1(DBG_IKE, "GSPM authenticator build_initiator");
 	auth_payload_t *auth_payload;
 	gspm_payload_t *gspm_payload;
 	chunk_t auth_data;
 	chunk_t gspm_data;
+	auth_cfg_t *auth;
+
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+	this->method = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
+	if (this->method == GSPM_PACE)
+	{
+		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
+	}
 
 	/**TODO needs manager -> plugin -> to reach DH Object from bus via Listener
 
@@ -118,17 +132,25 @@ METHOD(authenticator_t, build_initiator, status_t,
 	return NEED_MORE;
 }
 
-METHOD(authenticator_t, process_initiator, status_t,
+METHOD(authenticator_t, process_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM process_initiator");
-	return SUCCESS;
+	DBG1(DBG_IKE, "GSPM authenticator process_responder");
+	auth_cfg_t *auth;
+
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+	this->method = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
+	if (this->method == GSPM_PACE)
+	{
+		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
+	}
+	return NEED_MORE;
 }
 
 METHOD(authenticator_t, build_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM build_responder");
+	DBG1(DBG_IKE, "GSPM authenticator build_responder");
 	auth_payload_t *auth_payload;
 	gspm_payload_t *gspm_payload;
 	chunk_t auth_data;
@@ -152,10 +174,10 @@ METHOD(authenticator_t, build_responder, status_t,
 	return NEED_MORE;
 }
 
-METHOD(authenticator_t, process_responder, status_t,
+METHOD(authenticator_t, process_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM process_responder");
+	DBG1(DBG_IKE, "GSPM authenticator process_initiator");
 	return SUCCESS;
 }
 

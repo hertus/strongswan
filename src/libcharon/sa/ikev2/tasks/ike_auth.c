@@ -520,6 +520,12 @@ METHOD(task_t, build_i, status_t,
 			}
 		}
 
+		/**PACE add auth_rule for initiator*/
+		if(this->gspm_member)
+		{
+			cfg->add(cfg, AUTH_RULE_GSPM_MEMBER, this->gspm_member);
+		}
+
 		/* build authentication data */
 		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
 							this->other_nonce, this->my_nonce,
@@ -638,38 +644,47 @@ METHOD(task_t, process_r, status_t,
 
 		/**PACE set GSPM method auth rule specified, alternative to EAP with AUTH==NULL */
 		if (message->get_payload(message, AUTHENTICATION) == NULL)
-		{	/* before authenticating with EAP, we need a EAP config */
-			DBG1(DBG_IKE, "GSPM AUTH is NULL");
-			cand = get_auth_cfg(this, FALSE);
-			while (!cand || (
-					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_TYPE) == EAP_NAK &&
-					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_VENDOR) == 0))
-			{	/* peer requested EAP, but current config does not match */
-				DBG1(DBG_IKE, "peer requested EAP, config inacceptable");
-				this->peer_cfg->destroy(this->peer_cfg);
-				this->peer_cfg = NULL;
-				if (!update_cfg_candidates(this, FALSE))
-				{
-					this->authentication_failed = TRUE;
-					return NEED_MORE;
-				}
+		{
+			if(this->gspm_member)
+			{
+				DBG1(DBG_IKE, "GSPM member found, adding auth_cfg");
+				cfg->add(cfg, AUTH_RULE_GSPM_MEMBER, this->gspm_member);
+			}
+			else
+			{
+				/* before authenticating with EAP, we need a EAP config */
 				cand = get_auth_cfg(this, FALSE);
+				while (!cand || (
+						(uintptr_t)cand->get(cand, AUTH_RULE_EAP_TYPE) == EAP_NAK &&
+						(uintptr_t)cand->get(cand, AUTH_RULE_EAP_VENDOR) == 0))
+				{	/* peer requested EAP, but current config does not match */
+					DBG1(DBG_IKE, "peer requested EAP, config inacceptable");
+					this->peer_cfg->destroy(this->peer_cfg);
+					this->peer_cfg = NULL;
+					if (!update_cfg_candidates(this, FALSE))
+					{
+						this->authentication_failed = TRUE;
+						return NEED_MORE;
+					}
+					cand = get_auth_cfg(this, FALSE);
+				}
+				/* copy over the EAP specific rules for authentication */
+				cfg->add(cfg, AUTH_RULE_EAP_TYPE,
+						 cand->get(cand, AUTH_RULE_EAP_TYPE));
+				cfg->add(cfg, AUTH_RULE_EAP_VENDOR,
+						 cand->get(cand, AUTH_RULE_EAP_VENDOR));
+				id = (identification_t*)cand->get(cand, AUTH_RULE_EAP_IDENTITY);
+				if (id)
+				{
+					cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
+				}
+				id = (identification_t*)cand->get(cand, AUTH_RULE_AAA_IDENTITY);
+				if (id)
+				{
+					cfg->add(cfg, AUTH_RULE_AAA_IDENTITY, id->clone(id));
+				}
 			}
-			/* copy over the EAP specific rules for authentication */
-			cfg->add(cfg, AUTH_RULE_EAP_TYPE,
-					 cand->get(cand, AUTH_RULE_EAP_TYPE));
-			cfg->add(cfg, AUTH_RULE_EAP_VENDOR,
-					 cand->get(cand, AUTH_RULE_EAP_VENDOR));
-			id = (identification_t*)cand->get(cand, AUTH_RULE_EAP_IDENTITY);
-			if (id)
-			{
-				cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
-			}
-			id = (identification_t*)cand->get(cand, AUTH_RULE_AAA_IDENTITY);
-			if (id)
-			{
-				cfg->add(cfg, AUTH_RULE_AAA_IDENTITY, id->clone(id));
-			}
+
 		}
 
 		/* verify authentication data */
