@@ -13,12 +13,13 @@
  */
 
 #include "gspm_pace_listener.h"
+#include "src/libcharon/sa/ikev2/gspm/gspm_manager.h"
 
 #include <errno.h>
-
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
+#include <collections/hashtable.h>
 
 typedef struct private_gspm_pace_listener_t private_gspm_pace_listener_t;
 
@@ -34,7 +35,29 @@ struct private_gspm_pace_listener_t {
 
 	ike_sa_id_t *ike_sa_id;
 
+	/**
+	 * hashtable with dh objects relevant for gspm_pace connections
+	 * @key		SPI
+	 * @value	dh object
+	 */
+	hashtable_t *dh_objects;
 };
+
+/**
+ * Hashtable hash function
+ */
+static u_int64_t hash(uintptr_t key)
+{
+	return key;
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool equals(uintptr_t a, uintptr_t b)
+{
+	return a == b;
+}
 
 METHOD(listener_t, message, bool,
 	private_gspm_pace_listener_t *this,
@@ -43,20 +66,31 @@ METHOD(listener_t, message, bool,
 	bool incoming,
 	bool plain)
 {
-	//this->ike_sa_id = message->get_ike_sa_id(message);
-	this->ike_sa_id = ike_sa->get_id(ike_sa);
-	if (
-			(message->get_exchange_type(message) == IKE_SA_INIT)
-			&&
-			(message->get_notify(message, SECURE_PASSWORD_METHOD))
-			&&
-			(this->ike_sa_id->get_initiator_spi(this->ike_sa_id))
-			&&
-			(this->ike_sa_id->get_responder_spi(this->ike_sa_id))
-		)
+	u_int16_t method;
+	u_int64_t id;
+	notify_payload_t *notify_payload;
+	bool placeholder;
+
+	placeholder = true;
+
+	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		DBG1(DBG_IKE, "GSPM LISTENER sa_id_i is: %016llX", this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
-		DBG1(DBG_IKE, "GSPM LISTENER sa_id_r is: %016llX", this->ike_sa_id->get_responder_spi(this->ike_sa_id));
+		notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
+		if(notify_payload)
+		{
+			method = ntohs(*(u_int16_t*) notify_payload->get_notification_data(notify_payload).ptr);
+
+			if((method == GSPM_PACE)
+					&&
+				(message->get_ike_sa_id(message)->get_responder_spi(message->get_ike_sa_id(message))))
+			{
+				id = message->get_ike_sa_id(message)->get_responder_spi(message->get_ike_sa_id(message));
+				DBG1(DBG_IKE, "GSPM LISTENER sa_id_r is: %016llX", id);
+				this->dh_objects->put(this->dh_objects,
+						(void*)(uintptr_t) id,
+						(void*) placeholder);
+			}
+		}
 	}
 	return TRUE;
 }
@@ -71,15 +105,32 @@ METHOD(listener_t, ike_keys, bool,
 	ike_sa_t *rekey,
 	shared_key_t *shared)
 {
-	if(ike_sa->get_id(ike_sa) == this->ike_sa_id){
-		DBG1(DBG_IKE, "GSPM LISTENER called ike_keys and same ID!");
+	uint64_t id;
+
+	id = ike_sa->get_id(ike_sa)->get_responder_spi(ike_sa->get_id(ike_sa));
+	if(this->dh_objects->get(this->dh_objects,
+			(void*)(uintptr_t) id))
+	{
+		DBG1(DBG_IKE, "GSPM LISTENER found SPI in hashtable, put dh");
+		this->dh_objects->put(this->dh_objects, (void*)(uintptr_t) id, dh);
 	}
 	return TRUE;
+}
+
+METHOD(gspm_pace_listener_t, get_dh, diffie_hellman_t*,
+		private_gspm_pace_listener_t *this,
+		uint64_t spi)
+{
+	diffie_hellman_t *dh;
+
+	dh = this->dh_objects->get(this->dh_objects, (void*)(uintptr_t) spi);
+	return dh;
 }
 
 METHOD(gspm_pace_listener_t, destroy, void,
 	private_gspm_pace_listener_t *this)
 {
+	this->dh_objects->destroy(this->dh_objects);
 	free(this);
 }
 
@@ -98,7 +149,8 @@ gspm_pace_listener_t *gspm_pace_listener_create()
 			},
 			.destroy = _destroy,
 		},
+		.dh_objects = hashtable_create((hashtable_hash_t)hash,
+				   	   	   	   	   	   (hashtable_equals_t)equals, 32),
 	);
-
 	return &this->public;
 }
