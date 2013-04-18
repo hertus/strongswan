@@ -23,7 +23,6 @@
 #define GSPM_AUTHENTICATOR_H_
 
 typedef struct gspm_authenticator_t gspm_authenticator_t;
-typedef enum gspm_member_t gspm_member_t;
 
 #include <sa/authenticator.h>
 

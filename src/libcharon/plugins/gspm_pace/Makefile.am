@@ -13,6 +13,7 @@ plugin_LTLIBRARIES = libstrongswan-gspm-pace.la
 endif
 
 libstrongswan_gspm_pace_la_SOURCES = \
+	gspm_pace.h gspm_pace.c \
 	gspm_pace_plugin.h gspm_pace_plugin.c \
 	gspm_pace_listener.c gspm_pace_listener.h
 

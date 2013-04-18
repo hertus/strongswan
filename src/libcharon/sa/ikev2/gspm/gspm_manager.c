@@ -20,7 +20,7 @@
 typedef struct private_gspm_manager_t private_gspm_manager_t;
 typedef struct gspm_entry_t gspm_entry_t;
 
-ENUM(gspm_member_names, GSPM_RESERVED, GSPM_SPSKA,
+ENUM(gspm_memberlist_names, GSPM_RESERVED, GSPM_SPSKA,
 	"GSPM_RESERVED",
 	"GSPM_PACE",
 	"GSPM_AUGPAKE",

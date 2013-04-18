@@ -35,7 +35,7 @@ typedef struct gspm_manager_t gspm_manager_t;
  * 3	Secure PSK Authentication
  * ...
  * */
-enum gspm_member_t {
+enum gspm_memberlist_t {
 	GSPM_RESERVED = 0,
 	GSPM_PACE = 1,
 	GSPM_AUGPAKE = 2,

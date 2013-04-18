@@ -18,8 +18,8 @@
 #include <sa/ikev2/keymat_v2.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ke_payload.h>
-#include <encoding/payloads/gspm_payload.h>
 #include <sa/ikev2/gspm/gspm_manager.h>
+#include <sa/ikev2/gspm/gspm_member.h>
 
 typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
 
@@ -28,7 +28,6 @@ typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
  */
 struct private_gspm_authenticator_t
 {
-
 	/**
 	 * Public authenticator_t interface.
 	 */
@@ -65,71 +64,31 @@ struct private_gspm_authenticator_t
 	char reserved[3];
 
 	/**
-	 * random nonce s to include in GSPM ENONCE calculation
-	 */
-	chunk_t nonce;
-
-	/**
-	 * KE2 ephemeral public key from DH
-	 */
-	ke_payload_t *ke_payload;
-
-	/**
-	 * round#2 of method_pace
-	 */
-	bool round2;
-
-	/**
 	 * selected GSPM method from IKE_SA_INIT via auth_cfg
 	 */
-	u_int16_t method;
+	u_int16_t member_id;
 };
 
-/*
- * PACE round#1 create a random nonce s, calculate ENONCE with DH Key, map it and choose keypair
- * fill GSPM chunk with IV and ENONCE
- */
 METHOD(authenticator_t, build_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM authenticator build_initiator");
-	auth_payload_t *auth_payload;
-	gspm_payload_t *gspm_payload;
-	chunk_t auth_data;
-	chunk_t gspm_data;
 	auth_cfg_t *auth;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	this->method = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
-	if (this->method == GSPM_PACE)
+	this->member_id = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
+
+	gspm_member_t *member_authenticator;
+
+	member_authenticator = gspm_member_create_builder(this->ike_sa, this->received_nonce,
+			this->sent_nonce, this->received_init, this->sent_init,
+			this->reserved, this->member_id);
+
+	if (this->member_id == GSPM_PACE)
 	{
 		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
 	}
-
-	/**TODO needs manager -> plugin -> to reach DH Object from bus via Listener
-
-	diffie_hellman_t dh;
-	dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
-
-	*/
-	if(this->round2)
-	{
-		auth_payload = auth_payload_create();
-		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
-		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
-		message->add_payload(message, (payload_t*)auth_payload);
-
-		return SUCCESS;
-	}
-
-	gspm_data = chunk_empty;
-	gspm_payload = gspm_payload_create();
-	gspm_payload->set_data(gspm_payload, gspm_data);
-	chunk_free(&gspm_data);
-	message->add_payload(message, (payload_t*)gspm_payload);
-
-	return NEED_MORE;
+	return SUCCESS;
 }
 
 METHOD(authenticator_t, process_responder, status_t,
@@ -139,39 +98,20 @@ METHOD(authenticator_t, process_responder, status_t,
 	auth_cfg_t *auth;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	this->method = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
-	if (this->method == GSPM_PACE)
+	this->member_id = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
+	if (this->member_id == GSPM_PACE)
 	{
 		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
 	}
-	return NEED_MORE;
+	return SUCCESS;
 }
 
 METHOD(authenticator_t, build_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM authenticator build_responder");
-	auth_payload_t *auth_payload;
-	gspm_payload_t *gspm_payload;
-	chunk_t auth_data;
-	chunk_t gspm_data;
 
-	if(this->round2)
-	{
-		auth_payload = auth_payload_create();
-		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
-		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
-		message->add_payload(message, (payload_t*)auth_payload);
-		return SUCCESS;
-	}
-
-	gspm_payload = gspm_payload_create();
-	gspm_payload->set_data(gspm_payload, gspm_data);
-	chunk_free(&gspm_data);
-	message->add_payload(message, (payload_t*)gspm_payload);
-
-	return NEED_MORE;
+	return SUCCESS;
 }
 
 METHOD(authenticator_t, process_initiator, status_t,
