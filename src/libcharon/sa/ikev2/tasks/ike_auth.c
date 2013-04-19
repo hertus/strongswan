@@ -118,7 +118,7 @@ struct private_ike_auth_t {
 	/**
 	 * choosen GSPM member from initiator
 	 */
-	u_int16_t gspm_member;
+	u_int16_t gspm_member_selected;
 };
 
 /**
@@ -521,9 +521,9 @@ METHOD(task_t, build_i, status_t,
 		}
 
 		/**PACE add auth_rule for initiator*/
-		if(this->gspm_member)
+		if(this->gspm_member_selected)
 		{
-			cfg->add(cfg, AUTH_RULE_GSPM_MEMBER, this->gspm_member);
+			cfg->add(cfg, AUTH_RULE_GSPM_MEMBER, this->gspm_member_selected);
 		}
 
 		/* build authentication data */
@@ -580,7 +580,7 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify from initiator found");
-			this->gspm_member = gspm_select_member(message, FALSE);
+			this->gspm_member_selected = gspm_select_member(message, FALSE);
 		}
 		return collect_other_init_data(this, message);
 	}
@@ -645,10 +645,10 @@ METHOD(task_t, process_r, status_t,
 		/**PACE set GSPM method auth rule specified, alternative to EAP with AUTH==NULL */
 		if (message->get_payload(message, AUTHENTICATION) == NULL)
 		{
-			if(this->gspm_member)
+			if(this->gspm_member_selected)
 			{
 				DBG1(DBG_IKE, "GSPM member found, adding auth_cfg");
-				cfg->add(cfg, AUTH_RULE_GSPM_MEMBER, this->gspm_member);
+				cfg->add(cfg, AUTH_RULE_GSPM_MEMBER, this->gspm_member_selected);
 			}
 			else
 			{
@@ -765,11 +765,11 @@ METHOD(task_t, build_r, status_t,
 								chunk_empty);
 		}
 		/**PACE build notify responder with choosen method*/
-		if (this->gspm_member)
+		if (this->gspm_member_selected)
 		{
-			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_member: %d", this->gspm_member);
+			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_member: %d", this->gspm_member_selected);
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
-					gspm_generate_chunk_from_member(this->gspm_member));
+					gspm_generate_chunk_from_member(this->gspm_member_selected));
 		}
 		return collect_my_init_data(this, message);
 	}
@@ -948,7 +948,7 @@ METHOD(task_t, process_i, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify from responder found");
-			this->gspm_member = gspm_select_member(message, TRUE);
+			this->gspm_member_selected = gspm_select_member(message, TRUE);
 		}
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED) &&
 			multiple_auth_enabled())

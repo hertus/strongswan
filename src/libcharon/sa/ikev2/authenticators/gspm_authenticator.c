@@ -88,7 +88,7 @@ METHOD(authenticator_t, build_initiator, status_t,
 	{
 		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
 	}
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 METHOD(authenticator_t, process_responder, status_t,
@@ -103,7 +103,7 @@ METHOD(authenticator_t, process_responder, status_t,
 	{
 		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
 	}
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 METHOD(authenticator_t, build_responder, status_t,
@@ -111,14 +111,14 @@ METHOD(authenticator_t, build_responder, status_t,
 {
 	DBG1(DBG_IKE, "GSPM authenticator build_responder");
 
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 METHOD(authenticator_t, process_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
 	DBG1(DBG_IKE, "GSPM authenticator process_initiator");
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 METHOD(authenticator_t, destroy, void,
