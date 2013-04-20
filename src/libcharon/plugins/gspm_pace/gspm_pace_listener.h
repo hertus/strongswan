@@ -13,8 +13,11 @@
  */
 
 /**
- * @defgroup gspm_pace_listener gspm_pace_listener
- * @{ @ingroup gspm
+ * @defgroup gspm_pace gspm_pace
+ * @{ @ingroup gspm_pace
+ *
+ * @defgroup gspm_pace_plugin gspm_pace_plugin
+ * @{ @ingroup gspm_pace
  */
 
 #ifndef GSPM_PACE_LISTENER_H_
@@ -38,6 +41,11 @@ struct gspm_pace_listener_t {
 	 * Destroy a gspm_pace_listener_t.
 	 */
 	void (*destroy)(gspm_pace_listener_t *this);
+
+	/**
+	 * gets a dh_object which has been captured from bus
+	 */
+	diffie_hellman_t* (*get_dh)(gspm_pace_listener_t *this, uint64_t spi);
 };
 
 /**

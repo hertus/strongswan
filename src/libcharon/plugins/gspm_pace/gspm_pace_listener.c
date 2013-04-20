@@ -147,6 +147,7 @@ gspm_pace_listener_t *gspm_pace_listener_create()
 				.ike_keys = _ike_keys,
 				.message = _message,
 			},
+			.get_dh = _get_dh,
 			.destroy = _destroy,
 		},
 		.dh_objects = hashtable_create((hashtable_hash_t)hash,

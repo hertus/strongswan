@@ -70,6 +70,9 @@
  * @defgroup eap eap
  * @ingroup sa
  *
+ * @defgroup gspm gspm
+ * @ingroup sa
+ *
  * @defgroup xauth xauth
  * @ingroup sa
  *
@@ -162,6 +165,7 @@ typedef struct daemon_t daemon_t;
 #include <sa/shunt_manager.h>
 #include <config/backend_manager.h>
 #include <sa/eap/eap_manager.h>
+#include <sa/ikev2/gspm/gspm_manager.h>
 #include <sa/xauth/xauth_manager.h>
 #include <utils/capabilities.h>
 
@@ -254,6 +258,11 @@ struct daemon_t {
 	 * EAP manager to maintain registered EAP methods
 	 */
 	eap_manager_t *eap;
+
+	/**
+	 * PACE GSPM manager to maintain registered GSPM methods
+	 */
+	gspm_manager_t *gspm;
 
 	/**
 	 * XAuth manager to maintain registered XAuth methods

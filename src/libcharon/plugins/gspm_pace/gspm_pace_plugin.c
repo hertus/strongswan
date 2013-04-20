@@ -14,8 +14,10 @@
 
 #include "gspm_pace_plugin.h"
 #include "gspm_pace_listener.h"
+#include "gspm_pace.h"
 
 #include <daemon.h>
+#include <sa/ikev2/gspm/gspm_manager.h>
 
 typedef struct private_gspm_pace_plugin_t private_gspm_pace_plugin_t;
 
@@ -67,8 +69,11 @@ plugin_t *gspm_pace_plugin_create()
 		.listener = gspm_pace_listener_create(),
 	);
 
-
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
+	charon->gspm->add_method(charon->gspm, GSPM_PACE, false, (gspm_method_constructor_t) gspm_method_pace_create);
+	charon->gspm->add_method(charon->gspm, GSPM_PACE, true, (gspm_method_constructor_t) gspm_method_pace_create);
+
+	lib->set(lib, "gspm_pace_listener", this->listener);
 
 	return &this->public.plugin;
 }

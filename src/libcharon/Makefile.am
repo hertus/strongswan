@@ -85,7 +85,7 @@ sa/ikev2/authenticators/gspm_authenticator.c sa/ikev2/authenticators/gspm_authen
 sa/ikev2/authenticators/psk_authenticator.c sa/ikev2/authenticators/psk_authenticator.h \
 sa/ikev2/authenticators/pubkey_authenticator.c sa/ikev2/authenticators/pubkey_authenticator.h \
 sa/ikev2/gspm/gspm_manager.c sa/ikev2/gspm/gspm_manager.h \
-sa/ikev2/gspm/gspm_method.c sa/ikev2/gspm/gspm_method.h \
+sa/ikev2/gspm/gspm_method.h \
 sa/ikev2/tasks/child_create.c sa/ikev2/tasks/child_create.h \
 sa/ikev2/tasks/child_delete.c sa/ikev2/tasks/child_delete.h \
 sa/ikev2/tasks/child_rekey.c sa/ikev2/tasks/child_rekey.h \

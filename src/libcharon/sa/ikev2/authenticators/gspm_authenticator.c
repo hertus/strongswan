@@ -72,53 +72,77 @@ struct private_gspm_authenticator_t
 METHOD(authenticator_t, build_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM authenticator build_initiator");
 	auth_cfg_t *auth;
+	gspm_method_t *authenticator_method;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_METHOD);
 
-//	gspm_method_t *member_authenticator;
-//
-//	member_authenticator = gspm_member_create_builder(this->ike_sa, this->received_nonce,
-//			this->sent_nonce, this->received_init, this->sent_init,
-//			this->reserved, this->member_id);
+	authenticator_method = charon->gspm->create_instance(
+			charon->gspm, this->gspm_method_selected, FALSE,
+			this->ike_sa, this->received_nonce, this->sent_nonce,
+			this->received_init, this->sent_init, this->reserved);
 
-	if (this->gspm_method_selected == GSPM_PACE)
+	if(authenticator_method)
 	{
-		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
+		return authenticator_method->build(authenticator_method, message);
 	}
-	return NEED_MORE;
+	return FAILED;
 }
 
 METHOD(authenticator_t, process_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM authenticator process_responder");
 	auth_cfg_t *auth;
+	gspm_method_t *authenticator_method;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_METHOD);
-	if (this->gspm_method_selected == GSPM_PACE)
+
+	authenticator_method = charon->gspm->create_instance(
+				charon->gspm, this->gspm_method_selected, TRUE,
+				this->ike_sa, this->received_nonce, this->sent_nonce,
+				this->received_init, this->sent_init, this->reserved);
+
+	if(authenticator_method)
 	{
-		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
+		return authenticator_method->build(authenticator_method, message);
 	}
-	return NEED_MORE;
+	return FAILED;
 }
 
 METHOD(authenticator_t, build_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM authenticator build_responder");
+	gspm_method_t *authenticator_method;
 
-	return NEED_MORE;
+	authenticator_method = charon->gspm->create_instance(
+				charon->gspm, this->gspm_method_selected, FALSE,
+				this->ike_sa, this->received_nonce, this->sent_nonce,
+				this->received_init, this->sent_init, this->reserved);
+
+	if(authenticator_method)
+	{
+		return authenticator_method->build(authenticator_method, message);
+	}
+	return FAILED;
 }
 
 METHOD(authenticator_t, process_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE, "GSPM authenticator process_initiator");
-	return NEED_MORE;
+	gspm_method_t *authenticator_method;
+
+	authenticator_method = charon->gspm->create_instance(
+				charon->gspm, this->gspm_method_selected, TRUE,
+				this->ike_sa, this->received_nonce, this->sent_nonce,
+				this->received_init, this->sent_init, this->reserved);
+
+	if(authenticator_method)
+	{
+		return authenticator_method->build(authenticator_method, message);
+	}
+	return FAILED;
 }
 
 METHOD(authenticator_t, destroy, void,
@@ -153,6 +177,9 @@ gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
 	return &this->public;
 }
 
+/*
+ * Described in header.
+ */
 gspm_authenticator_t *gspm_authenticator_create_verifier(ike_sa_t *ike_sa,
 		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
 		chunk_t sent_init, char reserved[3])

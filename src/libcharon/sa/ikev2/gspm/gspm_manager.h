@@ -17,17 +17,18 @@
  * @{ @ingroup gspm
  */
 
-/**PACE gspm manager for method injection authenticator - plugin */
+/**PACE gspm manager for registered gspm_method constructors from plugins */
 
 #ifndef GSPM_MANAGER_H_
 #define GSPM_MANAGER_H_
 
-typedef struct gspm_manager_t gspm_manager_t;
-
 #include <utils/chunk.h>
 #include <src/libcharon/encoding/message.h>
+#include <sa/ikev2/gspm/gspm_method.h>
 
-/**secure password methods
+typedef struct gspm_manager_t gspm_manager_t;
+
+/** IANA secure password methods
  *
  * 0	Reserved
  * 1	P A C E
@@ -43,12 +44,66 @@ enum gspm_methodlist_t {
 };
 
 struct gspm_manager_t {
+	/**
+	 * Register a GSPM method implementation.
+	 *
+	 * @param method_id		IANA number of the GSPM method
+	 * @param constructor	constructor function, returns an gspm_method_t
+	 */
+	void (*add_method)(gspm_manager_t *this, u_int16_t method_id,
+			bool verifier, gspm_method_constructor_t constructor);
+
+	/**
+	 * Unregister a GSPM method implementation using it's constructor.
+	 *
+	 * @param constructor	constructor function to remove, as added in add_method
+	 */
+	void (*remove_method)(gspm_manager_t *this, gspm_method_constructor_t constructor);
+
+	/**
+	 * Create a new GSPM method instance.
+	 *
+	 * @param method_id		type of the GSPM method, IANA number of the method
+	 * @return				GSPM method instance, NULL if no constructor found
+	 */
+	gspm_method_t* (*create_instance)(gspm_manager_t *this, u_int16_t method_id,
+										bool verifier, ike_sa_t *ike_sa,
+										chunk_t received_nonce, chunk_t sent_nonce,
+										chunk_t received_init, chunk_t sent_init,
+										char reserved[3]);
+	/**
+	 * Destroys a gspm_manager_t object.
+	 */
 	void (*destroy)(gspm_manager_t *this);
 };
 
+/**
+ * Create a new notify chunk for all supported GSPM method.
+ *
+ * @return				chunk_t with all supported GSPM methods
+ */
 chunk_t gspm_generate_chunk();
-chunk_t gspm_generate_chunk_from_method(u_int16_t method);
+
+/**
+ * Create a new notify chunk with given method number.
+ *
+ * @param method_id		IANA number of the GSPM method
+ * @return				chunk_t with selected GSPM method
+ */
+chunk_t gspm_generate_chunk_from_method(u_int16_t method_id);
+
+/**
+ * Selects a method from given message chunk in notify, returns the selected method number
+ *
+ * @param message		message_t from a received message with notify SECURE_PASSWORD_METHODS
+ * @param initiator		if called from a initiator = true or a responder = false
+ * @return				u_int16_t from selected GSPM method number
+ */
 u_int16_t gspm_select_method(message_t *message, bool initiator);
+
+/**
+ * Create a gspm_manager instance.
+ */
 gspm_manager_t *gspm_manager_create();
 
 #endif /** GSPM_MANAGER_H_ @}*/

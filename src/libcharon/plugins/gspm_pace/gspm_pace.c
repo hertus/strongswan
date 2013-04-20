@@ -13,23 +13,36 @@
  */
 
 #include "gspm_pace.h"
+#include "gspm_pace_listener.h"
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/gspm_payload.h>
-#include <sa/ikev2/gspm/gspm_manager.h>
 #include <sa/ikev2/gspm/gspm_method.h>
 
 typedef struct private_gspm_method_pace_t private_gspm_method_pace_t;
 
+/**
+ * Private data of an gspm_method_pace_t object.
+ */
 struct private_gspm_method_pace_t {
 
 	/**
-	 * implements gspm_method interface
+	 * Public gspm_method interface
 	 */
 	gspm_method_pace_t public;
+
+	/**
+	 * listener which gives us dh_object from INIT
+	 */
+	gspm_pace_listener_t *listener;
+
+	/**
+	 * if its a verifier or not
+	 */
+	bool pace_verifier;
 
 	/**
 	 * Assigned IKE_SA
@@ -61,94 +74,40 @@ struct private_gspm_method_pace_t {
 	 */
 	char reserved[3];
 
-
-	/**
-	 * random nonce s to include in GSPM ENONCE calculation
-	 */
-	chunk_t nonce;
-
-	/**
-	 * KE2 ephemeral public key from DH
-	 */
-	ke_payload_t *ke_payload;
-
-	/**
-	 * round#2 of method_pace
-	 */
-	bool round2;
 };
 
-/*
- * gspm_method implementation
- */
-
-METHOD(gspm_method_t, build_initiator, status_t,
+METHOD(gspm_method_t, build, status_t,
 		private_gspm_method_pace_t *this, message_t *message)
 {
-	auth_payload_t *auth_payload;
 	gspm_payload_t *gspm_payload;
-	chunk_t auth_data;
 	chunk_t gspm_data;
+	diffie_hellman_t *dh;
+	uint64_t id;
 
-	/**TODO needs manager -> plugin -> to reach DH Object from bus via Listener
+	DBG1(DBG_IKE, "GSPM PACE build");
 
-	diffie_hellman_t dh;
-	dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
+	id = this->ike_sa->get_id(this->ike_sa)->get_responder_spi(this->ike_sa->get_id(this->ike_sa));
+	dh = this->listener->get_dh(this->listener, id);
 
-	*/
-	if(this->round2)
+	if(dh)
 	{
-		auth_payload = auth_payload_create();
-		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
-		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
-		message->add_payload(message, (payload_t*)auth_payload);
-
-		return SUCCESS;
+		DBG1(DBG_IKE, "GSPM PACE found a DH!");
 	}
+
+	//dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
 
 	gspm_data = chunk_empty;
 	gspm_payload = gspm_payload_create();
 	gspm_payload->set_data(gspm_payload, gspm_data);
 	chunk_free(&gspm_data);
 	message->add_payload(message, (payload_t*)gspm_payload);
-
-	return SUCCESS;
+	return NEED_MORE;
 }
-METHOD(gspm_method_t, process_responder, status_t,
+
+METHOD(gspm_method_t, process, status_t,
 		private_gspm_method_pace_t *this, message_t *message)
 {
-	return SUCCESS;
-}
-METHOD(gspm_method_t, build_responder, status_t,
-		private_gspm_method_pace_t *this, message_t *message)
-{
-	auth_payload_t *auth_payload;
-	gspm_payload_t *gspm_payload;
-	chunk_t auth_data;
-	chunk_t gspm_data;
-
-	if(this->round2)
-	{
-		auth_payload = auth_payload_create();
-		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
-		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
-		message->add_payload(message, (payload_t*)auth_payload);
-		return SUCCESS;
-	}
-
-	gspm_payload = gspm_payload_create();
-	gspm_payload->set_data(gspm_payload, gspm_data);
-	chunk_free(&gspm_data);
-	message->add_payload(message, (payload_t*)gspm_payload);
-
-	return SUCCESS;
-}
-METHOD(gspm_method_t, process_initiator, status_t,
-		private_gspm_method_pace_t *this, message_t *message)
-{
-	return SUCCESS;
+	return NEED_MORE;
 }
 
 METHOD(gspm_method_t, destroy, void,
@@ -158,55 +117,34 @@ METHOD(gspm_method_t, destroy, void,
 }
 
 /*
- * gspm_method implementation
- * see header file
+ * See header
  */
-gspm_method_t *gspm_method_pace_create_builder(ike_sa_t *ike_sa,
-		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
-		chunk_t sent_init, char reserved[3])
+gspm_method_pace_t *gspm_method_pace_create(
+		bool verifier, ike_sa_t *ike_sa,
+		chunk_t received_nonce, chunk_t sent_nonce,
+		chunk_t received_init, chunk_t sent_init,
+		char reserved[3])
 {
 	private_gspm_method_pace_t *this;
 
 	INIT(this,
 		.public = {
 			.gspm_method = {
-				.build = _build_initiator,
-				.process = _process_initiator,
+				.build = _build,
+				.process = _process,
 				.destroy = _destroy,
 			},
 		},
+		.pace_verifier = verifier,
 		.ike_sa = ike_sa,
-		.received_init = received_init,
-		.sent_init = sent_init,
 		.received_nonce = received_nonce,
 		.sent_nonce = sent_nonce,
+		.received_init = received_init,
+		.sent_init = sent_init,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
-	return &this->public.gspm_method;
-}
+	this->listener = (gspm_pace_listener_t*)lib->get(lib, "gspm_pace_listener");
 
-gspm_method_t *gspm_method_pace_create_verifier(ike_sa_t *ike_sa,
-		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
-		chunk_t sent_init, char reserved[3])
-{
-	private_gspm_method_pace_t *this;
-
-	INIT(this,
-		.public = {
-			.gspm_method = {
-				.build = _build_responder,
-				.process = _process_responder,
-				.destroy = _destroy,
-			},
-		},
-		.ike_sa = ike_sa,
-		.received_init = received_init,
-		.sent_init = sent_init,
-		.received_nonce = received_nonce,
-		.sent_nonce = sent_nonce,
-	);
-	memcpy(this->reserved, reserved, sizeof(this->reserved));
-
-	return &this->public.gspm_method;
+	return &this->public;
 }

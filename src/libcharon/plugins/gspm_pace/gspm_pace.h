@@ -36,23 +36,22 @@ struct gspm_method_pace_t {
 
 };
 
-
 /**
- * Create an GSPM method to build signatures.
+ * PACE Create an GSPM method to build signatures.
  *
- * @param ike_sa			associated ike_sa
- * @param cfg				authentication configuration
+ * @param verifier			authenticator is a verifier = true or a builder = false
+ * @param ike_sa            associated ike_sa
  * @param received_nonce	nonce received in IKE_SA_INIT
  * @param sent_nonce		nonce sent in IKE_SA_INIT
- * @param received_init		received IKE_SA_INIT message data
- * @param sent_init			sent IKE_SA_INIT message data
- * @param reserved			reserved bytes of the ID payload
- * @param method_id			ID of the selected GSPM method
- * @return					authenticator, NULL if not supported
+ * @param received_init     received IKE_SA_INIT message data
+ * @param sent_init         sent IKE_SA_INIT message data
+ * @param reserved          reserved bytes of ID payload
+ * @return					a gspm_method_pace, NULL if not supported
  */
-gspm_method_t *gspm_method_pace_create(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init,
-									char reserved[3]);
+gspm_method_pace_t *gspm_method_pace_create(
+		bool verifier, ike_sa_t *ike_sa,
+		chunk_t received_nonce, chunk_t sent_nonce,
+		chunk_t received_init, chunk_t sent_init,
+		char reserved[3]);
 
 #endif /** GSPM_PACE_PLUGIN_H_ @}*/
