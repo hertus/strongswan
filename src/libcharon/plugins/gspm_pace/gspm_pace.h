@@ -23,22 +23,22 @@
 #ifndef GSPM_PACE_H_
 #define GSPM_PACE_H_
 
-#include <sa/ikev2/gspm/gspm_member.h>
+#include <sa/ikev2/gspm/gspm_method.h>
 
-typedef struct gspm_member_pace_t gspm_member_pace_t;
+typedef struct gspm_method_pace_t gspm_method_pace_t;
 
-struct gspm_member_pace_t {
+struct gspm_method_pace_t {
 
 	/**
-	 * implements gspm_member interface
+	 * implements gspm_method interface
 	 */
-	gspm_member_t gspm_member;
+	gspm_method_t gspm_method;
 
 };
 
 
 /**
- * Create an GSPM member to build signatures.
+ * Create an GSPM method to build signatures.
  *
  * @param ike_sa			associated ike_sa
  * @param cfg				authentication configuration
@@ -47,28 +47,10 @@ struct gspm_member_pace_t {
  * @param received_init		received IKE_SA_INIT message data
  * @param sent_init			sent IKE_SA_INIT message data
  * @param reserved			reserved bytes of the ID payload
- * @param member_id			ID of the selected GSPM member
+ * @param method_id			ID of the selected GSPM method
  * @return					authenticator, NULL if not supported
  */
-gspm_member_t *gspm_member_pace_create_builder(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init,
-									char reserved[3]);
-
-/**
- * Create an GSPM member to verify signatures.
- *
- * @param ike_sa			associated ike_sa
- * @param message			message containing authentication data
- * @param received_nonce	nonce received in IKE_SA_INIT
- * @param sent_nonce		nonce sent in IKE_SA_INIT
- * @param received_init		received IKE_SA_INIT message data
- * @param sent_init			sent IKE_SA_INIT message data
- * @param reserved			reserved bytes of the ID payload
- * @param member_id			ID of the selected GSPM member
- * @return					authenticator, NULL if not supported
- */
-gspm_member_t *gspm_member_pace_create_verifier(ike_sa_t *ike_sa,
+gspm_method_t *gspm_method_pace_create(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
 									chunk_t received_init, chunk_t sent_init,
 									char reserved[3]);

@@ -17,10 +17,10 @@
  * @{ @ingroup sa
  */
 
-#ifndef GSPM_MEMBER_H_
-#define GSPM_MEMBER_H_
+#ifndef GSPM_METHOD_H_
+#define GSPM_METHOD_H_
 
-typedef struct gspm_member_t gspm_member_t;
+typedef struct gspm_method_t gspm_method_t;
 
 #include <library.h>
 #include <sa/ike_sa.h>
@@ -31,15 +31,15 @@ typedef struct gspm_member_t gspm_member_t;
 /**
  * GSPM Member interface implemented by the various authenticators.
  *
- * An member implementation handles AUTH and GSPM payloads,
+ * An method implementation handles AUTH and GSPM payloads,
  * depends on the gener secure password method. Received
  * messages from the authenticator are passed to the process() method,
  * to send authentication data back, the message  is passed to the build() method.
  */
-struct gspm_member_t {
+struct gspm_method_t {
 
 	/**
-	 * Process an incoming message using the member method.
+	 * Process an incoming message using the gspm method.
 	 *
 	 * @param message		message containing authentication payloads
 	 * @return
@@ -47,7 +47,7 @@ struct gspm_member_t {
 	 *						- FAILED if authentication failed
 	 *						- NEED_MORE if another exchange required
 	 */
-	status_t (*process)(gspm_member_t *this, message_t *message);
+	status_t (*process)(gspm_method_t *this, message_t *message);
 
 	/**
 	 * Attach authentication data to an outgoing message.
@@ -58,48 +58,32 @@ struct gspm_member_t {
 	 *						- FAILED if authentication failed
 	 *						- NEED_MORE if another exchange required
 	 */
-	status_t (*build)(gspm_member_t *this, message_t *message);
+	status_t (*build)(gspm_method_t *this, message_t *message);
 
 	/**
 	 * Destroy authenticator instance.
 	 */
-	void (*destroy) (gspm_member_t *this);
+	void (*destroy) (gspm_method_t *this);
 };
 
 /**
- * Create an GSPM member to build signatures.
+ * Constructor definition for a pluggable GSPM method.
+ *
+ * Each GSPM method must define a constructor function which will return
+ * an initialized object with the methods defined in gspm_method_t.
+ * Builder and verifier are separated later in gspm_manager by a boolean.
  *
  * @param ike_sa			associated ike_sa
- * @param cfg				authentication configuration
  * @param received_nonce	nonce received in IKE_SA_INIT
  * @param sent_nonce		nonce sent in IKE_SA_INIT
  * @param received_init		received IKE_SA_INIT message data
  * @param sent_init			sent IKE_SA_INIT message data
  * @param reserved			reserved bytes of the ID payload
- * @param member_id			ID of the selected GSPM member
- * @return					authenticator, NULL if not supported
+ * @return					implementation of gspm_method_t interface
  */
-gspm_member_t *gspm_member_create_builder(ike_sa_t *ike_sa,
+typedef gspm_method_t *(*gspm_method_constructor_t)(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
 									chunk_t received_init, chunk_t sent_init,
-									char reserved[3], uint16_t member_id);
+									char reserved[3]);
 
-/**
- * Create an GSPM member to verify signatures.
- *
- * @param ike_sa			associated ike_sa
- * @param message			message containing authentication data
- * @param received_nonce	nonce received in IKE_SA_INIT
- * @param sent_nonce		nonce sent in IKE_SA_INIT
- * @param received_init		received IKE_SA_INIT message data
- * @param sent_init			sent IKE_SA_INIT message data
- * @param reserved			reserved bytes of the ID payload
- * @param member_id			ID of the selected GSPM member
- * @return					authenticator, NULL if not supported
- */
-gspm_member_t *gspm_member_create_verifier(ike_sa_t *ike_sa,
-									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init,
-									char reserved[3], uint16_t member_id);
-
-#endif /** GSPM_MEMBER_H_ @}*/
+#endif /** GSPM_METHOD_H_ @}*/

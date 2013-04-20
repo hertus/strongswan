@@ -35,7 +35,7 @@ typedef struct gspm_manager_t gspm_manager_t;
  * 3	Secure PSK Authentication
  * ...
  * */
-enum gspm_memberlist_t {
+enum gspm_methodlist_t {
 	GSPM_RESERVED = 0,
 	GSPM_PACE = 1,
 	GSPM_AUGPAKE = 2,
@@ -47,8 +47,8 @@ struct gspm_manager_t {
 };
 
 chunk_t gspm_generate_chunk();
-chunk_t gspm_generate_chunk_from_member(u_int16_t member);
-u_int16_t gspm_select_member(message_t *message, bool initiator);
+chunk_t gspm_generate_chunk_from_method(u_int16_t method);
+u_int16_t gspm_select_method(message_t *message, bool initiator);
 gspm_manager_t *gspm_manager_create();
 
 #endif /** GSPM_MANAGER_H_ @}*/

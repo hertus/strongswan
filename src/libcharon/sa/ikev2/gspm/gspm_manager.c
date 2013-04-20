@@ -20,7 +20,7 @@
 typedef struct private_gspm_manager_t private_gspm_manager_t;
 typedef struct gspm_entry_t gspm_entry_t;
 
-ENUM(gspm_memberlist_names, GSPM_RESERVED, GSPM_SPSKA,
+ENUM(gspm_methodlist_names, GSPM_RESERVED, GSPM_SPSKA,
 	"GSPM_RESERVED",
 	"GSPM_PACE",
 	"GSPM_AUGPAKE",
@@ -63,7 +63,7 @@ chunk_t gspm_generate_chunk()
 	return chunk_clone(chunk);
 }
 
-chunk_t gspm_generate_chunk_from_member(u_int16_t member)
+chunk_t gspm_generate_chunk_from_method(u_int16_t member)
 {
 	chunk_t chunk;
 	u_int16_t method;
@@ -76,7 +76,7 @@ chunk_t gspm_generate_chunk_from_member(u_int16_t member)
 	return chunk_clone(chunk);
 }
 
-u_int16_t gspm_select_member(message_t *message, bool initiator){
+u_int16_t gspm_select_method(message_t *message, bool initiator){
 	notify_payload_t *notify_payload;
 	linked_list_t *gspm_method_list;
 	chunk_t data;

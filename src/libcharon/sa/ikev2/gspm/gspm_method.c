@@ -12,7 +12,7 @@
  * for more details.
  */
 
-#include "gspm_member.h"
+#include "gspm_method.h"
 #include "gspm_manager.h"
 
 #include <plugins/gspm_pace/gspm_pace.h>
@@ -20,17 +20,17 @@
 /**
  * Described in header.
  */
-gspm_member_t *gspm_member_create_builder(ike_sa_t *ike_sa,
+gspm_method_t *gspm_method_create_builder(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
 									chunk_t received_init, chunk_t sent_init,
-									char reserved[3], uint16_t member_id)
+									char reserved[3], uint16_t method_id)
 {
-	switch ((uintptr_t) member_id)
+	switch ((uintptr_t) method_id)
 	{
 		case GSPM_RESERVED:
 			/* reserved value */
 		case GSPM_PACE:
-//			return (gspm_member_t*)gspm_member_pace_create_builder(ike_sa,
+//			return (gspm_method_t*)gspm_method_pace_create_builder(ike_sa,
 //									received_nonce, sent_nonce,
 //									received_init, sent_init,
 //									reserved);
@@ -44,17 +44,17 @@ gspm_member_t *gspm_member_create_builder(ike_sa_t *ike_sa,
 /**
  * Described in header.
  */
-gspm_member_t *gspm_member_create_verifier(ike_sa_t *ike_sa,
+gspm_method_t *gspm_method_create_verifier(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
 									chunk_t received_init, chunk_t sent_init,
-									char reserved[3], uint16_t member_id)
+									char reserved[3], uint16_t method_id)
 {
-	switch ((uintptr_t) member_id)
+	switch ((uintptr_t) method_id)
 	{
 		case GSPM_RESERVED:
 			/* reserved value */
 		case GSPM_PACE:
-//			return (gspm_member_t*)gspm_member_pace_create_verifier(ike_sa,
+//			return (gspm_method_t*)gspm_method_pace_create_verifier(ike_sa,
 //									received_nonce, sent_nonce,
 //									received_init, sent_init,
 //									reserved);

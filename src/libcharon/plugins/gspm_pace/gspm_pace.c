@@ -20,16 +20,16 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/gspm_payload.h>
 #include <sa/ikev2/gspm/gspm_manager.h>
-#include <sa/ikev2/gspm/gspm_member.h>
+#include <sa/ikev2/gspm/gspm_method.h>
 
-typedef struct private_gspm_member_pace_t private_gspm_member_pace_t;
+typedef struct private_gspm_method_pace_t private_gspm_method_pace_t;
 
-struct private_gspm_member_pace_t {
+struct private_gspm_method_pace_t {
 
 	/**
-	 * implements gspm_member interface
+	 * implements gspm_method interface
 	 */
-	gspm_member_pace_t public;
+	gspm_method_pace_t public;
 
 	/**
 	 * Assigned IKE_SA
@@ -79,11 +79,11 @@ struct private_gspm_member_pace_t {
 };
 
 /*
- * gspm_member implementation
+ * gspm_method implementation
  */
 
-METHOD(gspm_member_t, build_initiator, status_t,
-		private_gspm_member_pace_t *this, message_t *message)
+METHOD(gspm_method_t, build_initiator, status_t,
+		private_gspm_method_pace_t *this, message_t *message)
 {
 	auth_payload_t *auth_payload;
 	gspm_payload_t *gspm_payload;
@@ -115,13 +115,13 @@ METHOD(gspm_member_t, build_initiator, status_t,
 
 	return SUCCESS;
 }
-METHOD(gspm_member_t, process_responder, status_t,
-		private_gspm_member_pace_t *this, message_t *message)
+METHOD(gspm_method_t, process_responder, status_t,
+		private_gspm_method_pace_t *this, message_t *message)
 {
 	return SUCCESS;
 }
-METHOD(gspm_member_t, build_responder, status_t,
-		private_gspm_member_pace_t *this, message_t *message)
+METHOD(gspm_method_t, build_responder, status_t,
+		private_gspm_method_pace_t *this, message_t *message)
 {
 	auth_payload_t *auth_payload;
 	gspm_payload_t *gspm_payload;
@@ -145,31 +145,31 @@ METHOD(gspm_member_t, build_responder, status_t,
 
 	return SUCCESS;
 }
-METHOD(gspm_member_t, process_initiator, status_t,
-		private_gspm_member_pace_t *this, message_t *message)
+METHOD(gspm_method_t, process_initiator, status_t,
+		private_gspm_method_pace_t *this, message_t *message)
 {
 	return SUCCESS;
 }
 
-METHOD(gspm_member_t, destroy, void,
-		private_gspm_member_pace_t *this)
+METHOD(gspm_method_t, destroy, void,
+		private_gspm_method_pace_t *this)
 {
 	free(this);
 }
 
 /*
- * gspm_member implementation
+ * gspm_method implementation
  * see header file
  */
-gspm_member_t *gspm_member_pace_create_builder(ike_sa_t *ike_sa,
+gspm_method_t *gspm_method_pace_create_builder(ike_sa_t *ike_sa,
 		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
 		chunk_t sent_init, char reserved[3])
 {
-	private_gspm_member_pace_t *this;
+	private_gspm_method_pace_t *this;
 
 	INIT(this,
 		.public = {
-			.gspm_member = {
+			.gspm_method = {
 				.build = _build_initiator,
 				.process = _process_initiator,
 				.destroy = _destroy,
@@ -183,18 +183,18 @@ gspm_member_t *gspm_member_pace_create_builder(ike_sa_t *ike_sa,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
-	return &this->public.gspm_member;
+	return &this->public.gspm_method;
 }
 
-gspm_member_t *gspm_member_pace_create_verifier(ike_sa_t *ike_sa,
+gspm_method_t *gspm_method_pace_create_verifier(ike_sa_t *ike_sa,
 		chunk_t received_nonce, chunk_t sent_nonce, chunk_t received_init,
 		chunk_t sent_init, char reserved[3])
 {
-	private_gspm_member_pace_t *this;
+	private_gspm_method_pace_t *this;
 
 	INIT(this,
 		.public = {
-			.gspm_member = {
+			.gspm_method = {
 				.build = _build_responder,
 				.process = _process_responder,
 				.destroy = _destroy,
@@ -208,5 +208,5 @@ gspm_member_t *gspm_member_pace_create_verifier(ike_sa_t *ike_sa,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
-	return &this->public.gspm_member;
+	return &this->public.gspm_method;
 }

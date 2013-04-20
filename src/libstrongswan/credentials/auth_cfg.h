@@ -110,7 +110,7 @@ enum auth_rule_t {
 	/** certificatePolicy constraint, numerical OID as char* */
 	AUTH_RULE_CERT_POLICY,
 	/** GSPM member to propose peer authentication, u_int16_t */
-	AUTH_RULE_GSPM_MEMBER,
+	AUTH_RULE_GSPM_METHOD,
 
 	/** intermediate certificate, certificate_t* */
 	AUTH_HELPER_IM_CERT,

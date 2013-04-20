@@ -52,7 +52,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,
 	"RULE_ECDSA_STRENGTH",
 	"RULE_SIGNATURE_SCHEME",
 	"RULE_CERT_POLICY",
-	"RULE_GSPM_MEMBER",
+	"RULE_GSPM_METHOD",
 	"HELPER_IM_CERT",
 	"HELPER_SUBJECT_CERT",
 	"HELPER_IM_HASH_URL",
@@ -90,7 +90,7 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_CERT_POLICY:
 		case AUTH_RULE_SIGNATURE_SCHEME:
-		case AUTH_RULE_GSPM_MEMBER:
+		case AUTH_RULE_GSPM_METHOD:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
@@ -224,7 +224,7 @@ static entry_t *entry_create(auth_rule_t type, va_list args)
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_RULE_CERT_POLICY:
-		case AUTH_RULE_GSPM_MEMBER:
+		case AUTH_RULE_GSPM_METHOD:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
@@ -266,7 +266,7 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
-		case AUTH_RULE_GSPM_MEMBER:
+		case AUTH_RULE_GSPM_METHOD:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_REVOCATION_CERT:
@@ -324,7 +324,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
-		case AUTH_RULE_GSPM_MEMBER:
+		case AUTH_RULE_GSPM_METHOD:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_REVOCATION_CERT:
@@ -394,7 +394,7 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
 			case AUTH_RULE_CERT_POLICY:
-			case AUTH_RULE_GSPM_MEMBER:
+			case AUTH_RULE_GSPM_METHOD:
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
@@ -472,7 +472,7 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_RULE_CERT_POLICY:
-		case AUTH_RULE_GSPM_MEMBER:
+		case AUTH_RULE_GSPM_METHOD:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
@@ -911,7 +911,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				}
 				case AUTH_RULE_XAUTH_BACKEND:
 				case AUTH_RULE_CERT_POLICY:
-				case AUTH_RULE_GSPM_MEMBER:
+				case AUTH_RULE_GSPM_METHOD:
 				case AUTH_HELPER_IM_HASH_URL:
 				case AUTH_HELPER_SUBJECT_HASH_URL:
 				{
@@ -1071,7 +1071,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_SIGNATURE_SCHEME:
 				clone->add(clone, type, (uintptr_t)value);
 				break;
-			case AUTH_RULE_GSPM_MEMBER:
+			case AUTH_RULE_GSPM_METHOD:
 			case AUTH_RULE_MAX:
 				break;
 		}

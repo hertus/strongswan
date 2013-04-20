@@ -19,7 +19,7 @@
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <sa/ikev2/gspm/gspm_manager.h>
-#include <sa/ikev2/gspm/gspm_member.h>
+#include <sa/ikev2/gspm/gspm_method.h>
 
 typedef struct private_gspm_authenticator_t private_gspm_authenticator_t;
 
@@ -66,7 +66,7 @@ struct private_gspm_authenticator_t
 	/**
 	 * selected GSPM method from IKE_SA_INIT via auth_cfg
 	 */
-	u_int16_t member_id;
+	u_int16_t gspm_method_selected;
 };
 
 METHOD(authenticator_t, build_initiator, status_t,
@@ -76,15 +76,15 @@ METHOD(authenticator_t, build_initiator, status_t,
 	auth_cfg_t *auth;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	this->member_id = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
+	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_METHOD);
 
-	gspm_member_t *member_authenticator;
+//	gspm_method_t *member_authenticator;
+//
+//	member_authenticator = gspm_member_create_builder(this->ike_sa, this->received_nonce,
+//			this->sent_nonce, this->received_init, this->sent_init,
+//			this->reserved, this->member_id);
 
-	member_authenticator = gspm_member_create_builder(this->ike_sa, this->received_nonce,
-			this->sent_nonce, this->received_init, this->sent_init,
-			this->reserved, this->member_id);
-
-	if (this->member_id == GSPM_PACE)
+	if (this->gspm_method_selected == GSPM_PACE)
 	{
 		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
 	}
@@ -98,8 +98,8 @@ METHOD(authenticator_t, process_responder, status_t,
 	auth_cfg_t *auth;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	this->member_id = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_MEMBER);
-	if (this->member_id == GSPM_PACE)
+	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_METHOD);
+	if (this->gspm_method_selected == GSPM_PACE)
 	{
 		DBG1(DBG_IKE, "GSPM authenticator FOUND PACE IN AUTH_RULE");
 	}

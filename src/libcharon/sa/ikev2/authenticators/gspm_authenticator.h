@@ -27,11 +27,6 @@ typedef struct gspm_authenticator_t gspm_authenticator_t;
 #include <sa/authenticator.h>
 
 /**
- * enum names for gspm_member_t.
- */
-extern enum_name_t *gspm_member_names;
-
-/**
  * Implementation of authenticator_t using generic secure password method
  *
 
