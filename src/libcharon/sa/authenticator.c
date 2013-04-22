@@ -120,6 +120,11 @@ authenticator_t *authenticator_create_verifier(
 		case AUTH_PSK:
 			return (authenticator_t*)psk_authenticator_create_verifier(ike_sa,
 										sent_nonce, received_init, reserved);
+		case AUTH_GSPM:
+			return (authenticator_t*)gspm_authenticator_create_verifier(ike_sa,
+											received_nonce, sent_nonce,
+											received_init, sent_init,
+											reserved);
 		default:
 			return NULL;
 	}

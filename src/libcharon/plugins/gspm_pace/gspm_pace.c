@@ -80,9 +80,10 @@ METHOD(gspm_method_t, build, status_t,
 		private_gspm_method_pace_t *this, message_t *message)
 {
 	gspm_payload_t *gspm_payload;
-	chunk_t gspm_data;
+	chunk_t gspm_data, shs;
 	diffie_hellman_t *dh;
 	uint64_t id;
+
 
 	DBG1(DBG_IKE, "GSPM PACE build");
 
@@ -91,9 +92,9 @@ METHOD(gspm_method_t, build, status_t,
 
 	if(dh)
 	{
-		DBG1(DBG_IKE, "GSPM PACE found a DH!");
+		dh->get_shared_secret(dh, &shs);
+		DBG1(DBG_IKE, "GSPM PACE found a DH: %d", shs.ptr);
 	}
-
 	//dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
 
 	gspm_data = chunk_empty;

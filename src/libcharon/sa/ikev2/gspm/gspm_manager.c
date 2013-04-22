@@ -72,15 +72,14 @@ struct private_gspm_manager_t {
 
 chunk_t gspm_generate_chunk()
 {
-	chunk_t chunk;
+	chunk_t chunk, chunk2;
 	u_int16_t method;
 
-	method = GSPM_PACE;
-	method = htons(method);
-	chunk = chunk_from_thing(method);
+	chunk = gspm_generate_chunk_from_method(GSPM_PACE);
+	chunk2 = gspm_generate_chunk_from_method(GSPM_AUGPAKE);
 
 	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
-	return chunk_clone(chunk);
+	return chunk_cat("cc", chunk, chunk2);
 }
 
 chunk_t gspm_generate_chunk_from_method(u_int16_t method_id)
@@ -98,49 +97,33 @@ chunk_t gspm_generate_chunk_from_method(u_int16_t method_id)
 
 u_int16_t gspm_select_method(message_t *message, bool initiator){
 	notify_payload_t *notify_payload;
-	linked_list_t *gspm_method_list;
 	chunk_t data;
-	u_int16_t method;
+	int len;
+	u_int16_t method, method_e, chosen_method;
+	enumerator_t *method_enumerator;
+
+	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
+	data = notify_payload->get_notification_data(notify_payload);
 
 	if(initiator)
 	{
-		notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
-		data = notify_payload->get_notification_data(notify_payload);
 		method = ntohs(*(u_int16_t*) data.ptr);
 		return method;
 	}
 	else
 	{
-		gspm_method_list = linked_list_create();
-		notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
-		if(notify_payload)
+		DBG1(DBG_IKE, "GSPM chunk len: %d", data.len);
+		for(len = 0; len < data.len/2; len++)
 		{
-			notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
-			data = notify_payload->get_notification_data(notify_payload);
-			method = ntohs(*(u_int16_t*) data.ptr);
-			//TODO enumerate data + memberlist
-
-			if (method == GSPM_PACE)
+			method = ntohs(*(u_int16_t*) data.ptr+len);
+			DBG1(DBG_IKE, "GSPM method in chunk: %d", method);
+			if(method == GSPM_AUGPAKE)
 			{
-				gspm_method_list->insert_last(gspm_method_list, (u_int16_t*) GSPM_PACE);
+				return GSPM_PACE;
 			}
-
-			/** enumerate list, add and choose methods -> MANAGER
-			 *
-
-			enumerator = gspm_method_list->create_enumerator(gspm_method_list);
-			while (enumerator->enumerate(enumerator, &gm))
-			{
-				if(gm == GSPM_PACE)
-				{
-				this->gspm_member = (u_int16_t) GSPM_PACE;
-				}
-			}
-			enumerator->destroy(enumerator);
-			 */
 		}
 	}
-	return 1;
+	return 0;
 }
 
 

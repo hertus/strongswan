@@ -37,7 +37,7 @@ struct gspm_method_pace_t {
 };
 
 /**
- * PACE Create an GSPM method to build signatures.
+ * Create an GSPM method to build signatures.
  *
  * @param verifier			authenticator is a verifier = true or a builder = false
  * @param ike_sa            associated ike_sa
