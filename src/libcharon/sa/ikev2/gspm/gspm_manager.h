@@ -56,9 +56,10 @@ struct gspm_manager_t {
 	/**
 	 * Unregister a GSPM method implementation using it's constructor.
 	 *
-	 * @param constructor	constructor function to remove, as added in add_method
+	 * @param constructor	constructor function to remove
 	 */
-	void (*remove_method)(gspm_manager_t *this, gspm_method_constructor_t constructor);
+	void (*remove_method)(gspm_manager_t *this,
+			gspm_method_constructor_t constructor);
 
 	/**
 	 * Create a new GSPM method instance.
@@ -67,10 +68,9 @@ struct gspm_manager_t {
 	 * @return				GSPM method instance, NULL if no constructor found
 	 */
 	gspm_method_t* (*create_instance)(gspm_manager_t *this, u_int16_t method_id,
-										bool verifier, ike_sa_t *ike_sa,
-										chunk_t received_nonce, chunk_t sent_nonce,
-										chunk_t received_init, chunk_t sent_init,
-										char reserved[3]);
+			bool verifier, ike_sa_t *ike_sa, chunk_t received_nonce,
+			chunk_t sent_nonce, chunk_t received_init, chunk_t sent_init,
+			char reserved[3]);
 	/**
 	 * Destroys a gspm_manager_t object.
 	 */
@@ -93,9 +93,10 @@ chunk_t gspm_generate_chunk();
 chunk_t gspm_generate_chunk_from_method(u_int16_t method_id);
 
 /**
- * Selects a method from given message chunk in notify, returns the selected method number
+ * Selects a method from given message chunk in notify,
+ * returns the selected method number
  *
- * @param message		message_t from a received message with notify SECURE_PASSWORD_METHODS
+ * @param message		message_t from a received message with notify GSPM
  * @param initiator		if called from a initiator = true or a responder = false
  * @return				u_int16_t from selected GSPM method number
  */

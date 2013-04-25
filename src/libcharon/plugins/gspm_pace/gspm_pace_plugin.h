@@ -23,6 +23,8 @@
 #ifndef GSPM_PACE_PLUGIN_H_
 #define GSPM_PACE_PLUGIN_H_
 
+#include "gspm_pace_listener.h"
+
 #include <plugins/plugin.h>
 
 typedef struct gspm_pace_plugin_t gspm_pace_plugin_t;
@@ -37,5 +39,10 @@ struct gspm_pace_plugin_t {
 	 */
 	plugin_t plugin;
 };
+
+/**
+ * Listener getting DH object
+ */
+gspm_pace_listener_t *gspm_pace_listener;
 
 #endif /** GSPM_PACE_PLUGIN_H_ @}*/

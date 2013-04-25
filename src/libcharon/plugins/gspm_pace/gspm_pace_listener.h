@@ -44,10 +44,10 @@ struct gspm_pace_listener_t {
 
 	/**
 	 * gets a dh_object which has been captured from bus
-	 * @param spi	SPI from responder
-	 * @return		diffie_hellman_t object
+	 * @param ike_sa	ike_sa from round
+	 * @return			iffie_hellman_t object
 	 */
-	diffie_hellman_t* (*get_dh)(gspm_pace_listener_t *this, uint64_t spi);
+	diffie_hellman_t* (*get_dh)(gspm_pace_listener_t *this, ike_sa_t *ike_sa);
 };
 
 /**

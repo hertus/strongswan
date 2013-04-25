@@ -13,7 +13,6 @@
  */
 
 #include "gspm_pace_plugin.h"
-#include "gspm_pace_listener.h"
 #include "gspm_pace.h"
 
 #include <daemon.h>
@@ -30,11 +29,6 @@ struct private_gspm_pace_plugin_t {
 	 * implements plugin interface
 	 */
 	gspm_pace_plugin_t public;
-
-	/**
-	 * Listener getting DH object
-	 */
-	gspm_pace_listener_t *listener;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -46,14 +40,11 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 		private_gspm_pace_plugin_t *this)
 {
-	charon->bus->remove_listener(charon->bus, &this->listener->listener);
-	this->listener->destroy(this->listener);
+	charon->bus->remove_listener(charon->bus, &gspm_pace_listener->listener);
+	gspm_pace_listener->destroy(gspm_pace_listener);
 	free(this);
 }
 
-/*
- * see header file
- */
 plugin_t *gspm_pace_plugin_create()
 {
 	private_gspm_pace_plugin_t *this;
@@ -66,15 +57,14 @@ plugin_t *gspm_pace_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.listener = gspm_pace_listener_create(),
 	);
 
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
-	charon->gspm->add_method(charon->gspm, GSPM_PACE, false, (gspm_method_constructor_t) gspm_method_pace_create);
-	charon->gspm->add_method(charon->gspm, GSPM_PACE, true, (gspm_method_constructor_t) gspm_method_pace_create);
-
-	lib->set(lib, "gspm_pace_listener", this->listener);
+	gspm_pace_listener = gspm_pace_listener_create(),
+	charon->bus->add_listener(charon->bus, &gspm_pace_listener->listener);
+	charon->gspm->add_method(charon->gspm, GSPM_PACE, false,
+			(gspm_method_constructor_t) gspm_method_pace_create);
+	charon->gspm->add_method(charon->gspm, GSPM_PACE, true,
+			(gspm_method_constructor_t) gspm_method_pace_create);
 
 	return &this->public.plugin;
 }
-

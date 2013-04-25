@@ -76,7 +76,8 @@ METHOD(authenticator_t, build_initiator, status_t,
 	gspm_method_t *authenticator_method;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_METHOD);
+	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->
+			get(auth, AUTH_RULE_GSPM_METHOD);
 
 	authenticator_method = charon->gspm->create_instance(
 			charon->gspm, this->gspm_method_selected, FALSE,
@@ -97,7 +98,8 @@ METHOD(authenticator_t, process_responder, status_t,
 	gspm_method_t *authenticator_method;
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->get(auth, AUTH_RULE_GSPM_METHOD);
+	this->gspm_method_selected = (u_int16_t)(intptr_t) auth->
+			get(auth, AUTH_RULE_GSPM_METHOD);
 
 	authenticator_method = charon->gspm->create_instance(
 				charon->gspm, this->gspm_method_selected, TRUE,

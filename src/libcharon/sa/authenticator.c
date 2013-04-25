@@ -26,6 +26,7 @@
 #include <sa/ikev1/authenticators/pubkey_v1_authenticator.h>
 #include <sa/ikev1/authenticators/hybrid_authenticator.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/gspm_payload.h>
 #include <encoding/payloads/notify_payload.h>
 
 ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
@@ -91,11 +92,13 @@ authenticator_t *authenticator_create_verifier(
 									char reserved[3])
 {
 	auth_payload_t *auth_payload;
+	gspm_payload_t *gspm_payload;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
+	gspm_payload = (gspm_payload_t*)message->get_payload(message, GENERIC_SECURE_PASSWORD_METHOD);
 	if (auth_payload == NULL)
 	{
-		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
+		if (gspm_payload)
 		{
 			return (authenticator_t*)gspm_authenticator_create_verifier(ike_sa,
 											received_nonce, sent_nonce,
@@ -120,11 +123,6 @@ authenticator_t *authenticator_create_verifier(
 		case AUTH_PSK:
 			return (authenticator_t*)psk_authenticator_create_verifier(ike_sa,
 										sent_nonce, received_init, reserved);
-		case AUTH_GSPM:
-			return (authenticator_t*)gspm_authenticator_create_verifier(ike_sa,
-											received_nonce, sent_nonce,
-											received_init, sent_init,
-											reserved);
 		default:
 			return NULL;
 	}

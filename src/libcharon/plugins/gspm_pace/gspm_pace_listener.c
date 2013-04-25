@@ -22,6 +22,23 @@
 #include <collections/hashtable.h>
 
 typedef struct private_gspm_pace_listener_t private_gspm_pace_listener_t;
+typedef struct dh_entry_t dh_entry_t;
+
+/**
+ * dh object entry
+ */
+struct dh_entry_t {
+
+	/**
+	 * ike_sa_id
+	 */
+	ike_sa_id_t *ike_sa_id;
+
+	/**
+	 * dh object
+	 */
+	diffie_hellman_t *dh;
+};
 
 /**
  * Private data of an gspm_pace_listener_t object.
@@ -33,6 +50,9 @@ struct private_gspm_pace_listener_t {
 	 */
 	gspm_pace_listener_t public;
 
+	/**
+	 * ID of assigned IKE_SA.
+	 */
 	ike_sa_id_t *ike_sa_id;
 
 	/**
@@ -46,7 +66,7 @@ struct private_gspm_pace_listener_t {
 /**
  * Hashtable hash function
  */
-static u_int64_t hash(uintptr_t key)
+static u_int32_t hash(u_int32_t key)
 {
 	return key;
 }
@@ -54,77 +74,159 @@ static u_int64_t hash(uintptr_t key)
 /**
  * Hashtable equals function
  */
-static bool equals(uintptr_t a, uintptr_t b)
+static bool equals(u_int32_t a, u_int32_t b)
 {
 	return a == b;
 }
 
-METHOD(listener_t, message, bool,
-	private_gspm_pace_listener_t *this,
-	ike_sa_t *ike_sa,
-	message_t *message,
-	bool incoming,
-	bool plain)
+
+/**
+ * creates a hash value from 2 SPI's for uniqueness
+ */
+static u_int32_t create_spi_hash(ike_sa_id_t *id)
 {
+	u_int64_t idi, idr;
+	chunk_t chunk_spi, chunk_spr;
+
+	idi = id->get_initiator_spi(id);
+	idr = id->get_responder_spi(id);
+
+	chunk_spi = chunk_from_thing(idi);
+	chunk_spr = chunk_from_thing(idr);
+	return chunk_hash(chunk_cat("cc", chunk_spi, chunk_spr));
+}
+
+METHOD(listener_t, message, bool, private_gspm_pace_listener_t *this,
+	ike_sa_t *ike_sa, message_t *message, bool incoming, bool plain)
+{
+	ike_sa_id_t *id;
 	u_int16_t method;
-	u_int64_t id;
+	uintptr_t hash;
+	dh_entry_t *dh_entry;
 	notify_payload_t *notify_payload;
-	bool placeholder;
 
-	placeholder = true;
+	id = ike_sa->get_id(ike_sa);
 
-	if (message->get_exchange_type(message) == IKE_SA_INIT)
+	if(id->is_initiator(id))
+	{
+		if (incoming && message->get_exchange_type(message) == IKE_SA_INIT)
+		{
+			notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
+			if(notify_payload)
+			{
+				method = ntohs(*(u_int16_t*) notify_payload->
+						get_notification_data(notify_payload).ptr);
+				if(method == GSPM_PACE)
+				{
+					hash = create_spi_hash(id);
+					dh_entry = malloc_thing(dh_entry_t);
+					dh_entry->ike_sa_id = id->clone(id);
+
+					DBG1(DBG_IKE, "GSPM LISTENER hash is in PACE: %d", hash);
+
+					this->dh_objects->put(this->dh_objects, (void*)hash, dh_entry);
+				}
+			}
+		}
+	}
+	else
+	{
+		if (!incoming && message->get_exchange_type(message) == IKE_SA_INIT)
+		{
+			notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
+			if(notify_payload)
+			{
+				/**TODO get pace from a list*/
+				method = ntohs(*(u_int16_t*) notify_payload->
+						get_notification_data(notify_payload).ptr);
+				if(method == GSPM_PACE)
+				{
+					hash = create_spi_hash(id);
+					dh_entry = malloc_thing(dh_entry_t);
+					dh_entry->ike_sa_id = id->clone(id);
+
+					DBG1(DBG_IKE, "GSPM LISTENER hash is in PACE: %d", hash);
+
+					this->dh_objects->put(this->dh_objects, (void*)hash, dh_entry);
+				}
+			}
+		}
+	}
+
+	if (incoming && message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 		if(notify_payload)
 		{
-			method = ntohs(*(u_int16_t*) notify_payload->get_notification_data(notify_payload).ptr);
-
-			if((method == GSPM_PACE)
-					&&
-				(message->get_ike_sa_id(message)->get_responder_spi(message->get_ike_sa_id(message))))
+			method = ntohs(*(u_int16_t*) notify_payload->
+					get_notification_data(notify_payload).ptr);
+			if(method == GSPM_PACE)
 			{
-				id = message->get_ike_sa_id(message)->get_responder_spi(message->get_ike_sa_id(message));
-				DBG1(DBG_IKE, "GSPM LISTENER sa_id_r is: %016llX", id);
-				this->dh_objects->put(this->dh_objects,
-						(void*)(uintptr_t) id,
-						(void*) placeholder);
+				hash = create_spi_hash(id);
+				dh_entry = malloc_thing(dh_entry_t);
+				dh_entry->ike_sa_id = ike_sa->get_id(ike_sa)->
+					clone(ike_sa->get_id(ike_sa));
+
+				DBG1(DBG_IKE, "GSPM LISTENER hash is in PACE: %d", hash);
+
+				this->dh_objects->put(this->dh_objects, (void*)hash, dh_entry);
 			}
 		}
 	}
 	return TRUE;
 }
 
-METHOD(listener_t, ike_keys, bool,
-	private_gspm_pace_listener_t *this,
-	ike_sa_t *ike_sa,
-	diffie_hellman_t *dh,
-	chunk_t dh_other,
-	chunk_t nonce_i,
-	chunk_t nonce_r,
-	ike_sa_t *rekey,
-	shared_key_t *shared)
+METHOD(listener_t, ike_keys, bool,	private_gspm_pace_listener_t *this,
+	ike_sa_t *ike_sa, diffie_hellman_t *dh,	chunk_t dh_other, chunk_t nonce_i,
+	chunk_t nonce_r, ike_sa_t *rekey, shared_key_t *shared)
 {
-	uint64_t id;
+	uintptr_t hash;
+	dh_entry_t *dh_entry;
+	ike_sa_id_t *id;
 
-	id = ike_sa->get_id(ike_sa)->get_responder_spi(ike_sa->get_id(ike_sa));
-	if(this->dh_objects->get(this->dh_objects,
-			(void*)(uintptr_t) id))
+	id = ike_sa->get_id(ike_sa);
+	hash = create_spi_hash(id);
+	DBG1(DBG_IKE, "GSPM LISTENER hash is: %d", hash);
+
+	if(this->dh_objects->get(this->dh_objects, (void*)hash))
 	{
-		DBG1(DBG_IKE, "GSPM LISTENER found SPI in hashtable, put dh");
-		this->dh_objects->put(this->dh_objects, (void*)(uintptr_t) id, dh);
+		DBG1(DBG_IKE, "GSPM LISTENER found hash, put dh");
+		dh_entry = malloc_thing(dh_entry_t);
+		dh_entry->dh = dh;
+		dh_entry->ike_sa_id = ike_sa->get_id(ike_sa);
+		this->dh_objects->put(this->dh_objects, (void*)hash, dh_entry);
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_updown, bool, private_gspm_pace_listener_t *this,
+	ike_sa_t *ike_sa, bool up)
+{
+	uintptr_t hash;
+	ike_sa_id_t *id;
+
+	id = ike_sa->get_id(ike_sa);
+	hash = create_spi_hash(id);
+
+	if(!up){
+		DBG1(DBG_IKE, "GSPM LISTENER remove dh");
+		this->dh_objects->remove(this->dh_objects, (void*)hash);
 	}
 	return TRUE;
 }
 
 METHOD(gspm_pace_listener_t, get_dh, diffie_hellman_t*,
-		private_gspm_pace_listener_t *this,
-		uint64_t spi)
+	private_gspm_pace_listener_t *this, ike_sa_t *ike_sa)
 {
-	diffie_hellman_t *dh;
+	dh_entry_t *dh_entry;
+	uintptr_t hash;
+	ike_sa_id_t *id;
 
-	dh = this->dh_objects->get(this->dh_objects, (void*)(uintptr_t) spi);
-	return dh;
+	id = ike_sa->get_id(ike_sa);
+	hash = create_spi_hash(id);
+	dh_entry = this->dh_objects->get(this->dh_objects, (void*)hash);
+
+	return dh_entry->dh;
 }
 
 METHOD(gspm_pace_listener_t, destroy, void,
@@ -144,8 +246,9 @@ gspm_pace_listener_t *gspm_pace_listener_create()
 	INIT(this,
 		.public = {
 			.listener = {
-				.ike_keys = _ike_keys,
 				.message = _message,
+				.ike_keys = _ike_keys,
+				.ike_updown = _ike_updown,
 			},
 			.get_dh = _get_dh,
 			.destroy = _destroy,

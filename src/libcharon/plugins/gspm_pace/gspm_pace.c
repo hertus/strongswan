@@ -13,7 +13,7 @@
  */
 
 #include "gspm_pace.h"
-#include "gspm_pace_listener.h"
+#include "gspm_pace_plugin.h"
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
@@ -33,11 +33,6 @@ struct private_gspm_method_pace_t {
 	 * Public gspm_method interface
 	 */
 	gspm_method_pace_t public;
-
-	/**
-	 * listener which gives us dh_object from INIT
-	 */
-	gspm_pace_listener_t *listener;
 
 	/**
 	 * if its a verifier or not
@@ -82,19 +77,17 @@ METHOD(gspm_method_t, build, status_t,
 	gspm_payload_t *gspm_payload;
 	chunk_t gspm_data, shs;
 	diffie_hellman_t *dh;
-	uint64_t id;
-
 
 	DBG1(DBG_IKE, "GSPM PACE build");
 
-	id = this->ike_sa->get_id(this->ike_sa)->get_responder_spi(this->ike_sa->get_id(this->ike_sa));
-	dh = this->listener->get_dh(this->listener, id);
+	dh = gspm_pace_listener->get_dh(gspm_pace_listener, this->ike_sa);
 
 	if(dh)
 	{
 		dh->get_shared_secret(dh, &shs);
 		DBG1(DBG_IKE, "GSPM PACE found a DH: %d", shs.ptr);
 	}
+
 	//dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
 
 	gspm_data = chunk_empty;
@@ -144,8 +137,6 @@ gspm_method_pace_t *gspm_method_pace_create(
 		.sent_init = sent_init,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
-
-	this->listener = (gspm_pace_listener_t*)lib->get(lib, "gspm_pace_listener");
 
 	return &this->public;
 }

@@ -72,14 +72,14 @@ struct private_gspm_manager_t {
 
 chunk_t gspm_generate_chunk()
 {
-	chunk_t chunk, chunk2;
-	u_int16_t method;
+	chunk_t chunk;
 
 	chunk = gspm_generate_chunk_from_method(GSPM_PACE);
-	chunk2 = gspm_generate_chunk_from_method(GSPM_AUGPAKE);
 
-	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
-	return chunk_cat("cc", chunk, chunk2);
+	/** need to clone on heap, cause on stack byteorder changes after
+	 * return (compiler, kernel...)
+	 */
+	return chunk_clone(chunk);
 }
 
 chunk_t gspm_generate_chunk_from_method(u_int16_t method_id)
@@ -91,7 +91,6 @@ chunk_t gspm_generate_chunk_from_method(u_int16_t method_id)
 	method = htons(method);
 	chunk = chunk_from_thing(method);
 
-	/** need to clone on heap, cause on stack byteorder changes after return (compiler, kernel...)*/
 	return chunk_clone(chunk);
 }
 
@@ -105,24 +104,25 @@ u_int16_t gspm_select_method(message_t *message, bool initiator){
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 	data = notify_payload->get_notification_data(notify_payload);
 
-	if(initiator)
-	{
-		method = ntohs(*(u_int16_t*) data.ptr);
-		return method;
-	}
+	method = ntohs(*(u_int16_t*) data.ptr);
+	return method;
+
+	/**
 	else
 	{
 		DBG1(DBG_IKE, "GSPM chunk len: %d", data.len);
 		for(len = 0; len < data.len/2; len++)
 		{
-			method = ntohs(*(u_int16_t*) data.ptr+len);
+			method = ntohs(*(u_int16_t*) data.ptr);
 			DBG1(DBG_IKE, "GSPM method in chunk: %d", method);
-			if(method == GSPM_AUGPAKE)
+			if(method == GSPM_PACE)
 			{
 				return GSPM_PACE;
 			}
+			chunk_increment(data);
 		}
 	}
+	**/
 	return 0;
 }
 
@@ -163,11 +163,9 @@ METHOD(gspm_manager_t, remove_method, void,
 }
 
 METHOD(gspm_manager_t, create_instance, gspm_method_t*,
-	private_gspm_manager_t *this, u_int16_t method_id,
-	bool verifier, ike_sa_t *ike_sa,
-	chunk_t received_nonce, chunk_t sent_nonce,
-	chunk_t received_init, chunk_t sent_init,
-	char reserved[3])
+	private_gspm_manager_t *this, u_int16_t method_id, bool verifier,
+	ike_sa_t *ike_sa, chunk_t received_nonce, chunk_t sent_nonce,
+	chunk_t received_init, chunk_t sent_init, char reserved[3])
 {
 	enumerator_t *enumerator;
 	gspm_entry_t *entry;

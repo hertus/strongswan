@@ -39,7 +39,7 @@ struct gspm_method_pace_t {
 /**
  * Create an GSPM method to build signatures.
  *
- * @param verifier			authenticator is a verifier = true or a builder = false
+ * @param verifier			authenticator is a verifier=true or a builder=false
  * @param ike_sa            associated ike_sa
  * @param received_nonce	nonce received in IKE_SA_INIT
  * @param sent_nonce		nonce sent in IKE_SA_INIT

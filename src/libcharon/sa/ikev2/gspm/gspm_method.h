@@ -29,9 +29,7 @@ typedef struct gspm_method_t gspm_method_t;
  * PACE GSPM method interface implemented by the various authenticators.
  *
  * An method implementation handles AUTH and GSPM payloads,
- * depends on the generic secure password method. Received
- * messages from the authenticator are passed to the process() method,
- * to send authentication data back, the message  is passed to the build() method.
+ * depends on the generic secure password method.
  */
 struct gspm_method_t {
 
@@ -70,7 +68,7 @@ struct gspm_method_t {
  * an initialized object with the methods defined in gspm_method_t.
  * Builder and verifier are separated later in gspm_manager by a boolean.
  *
- * @param verifier			authenticator is a verifier = true or a builder = false
+ * @param verifier			authenticator is a verifier=true or a builder=false
  * @param ike_sa            associated ike_sa
  * @param received_nonce	nonce received in IKE_SA_INIT
  * @param sent_nonce		nonce sent in IKE_SA_INIT
