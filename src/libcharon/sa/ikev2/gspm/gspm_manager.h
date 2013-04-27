@@ -26,22 +26,26 @@
 #include <src/libcharon/encoding/message.h>
 #include <sa/ikev2/gspm/gspm_method.h>
 
+typedef enum  gspm_methodlist_t gspm_methodlist_t;
 typedef struct gspm_manager_t gspm_manager_t;
 
 /** IANA secure password methods
  *
- * 0	Reserved
  * 1	P A C E
  * 2	AugPAKE
  * 3	Secure PSK Authentication
  * ...
- * */
+ */
 enum gspm_methodlist_t {
-	GSPM_RESERVED = 0,
 	GSPM_PACE = 1,
 	GSPM_AUGPAKE = 2,
 	GSPM_SPSKA = 3,
 };
+
+/**
+ * enum names for gspm_methodlist_names.
+ */
+extern enum_name_t *gspm_methodlist_names;
 
 struct gspm_manager_t {
 	/**
@@ -71,6 +75,34 @@ struct gspm_manager_t {
 			bool verifier, ike_sa_t *ike_sa, chunk_t received_nonce,
 			chunk_t sent_nonce, chunk_t received_init, chunk_t sent_init,
 			char reserved[3]);
+	/**
+	 * Gets notify chunk with GSPM methods.
+	 *
+	 * @return				chunk_t with all methods as u_int16_t
+	 */
+	chunk_t (*get_notify_chunk)(gspm_manager_t *this);
+
+	/**
+	 * Gets notify chunk with GSPM methods.
+	 *
+	 * @param				method id as u_int16_t
+	 * @return				chunk_t with all methods as u_int16_t
+	 */
+	chunk_t (*get_notify_chunk_from_method)(gspm_manager_t *this,
+		u_int16_t method_id);
+
+	/**
+	 * Gets the selected GSPM method from a list of methods in a message with
+	 * GSPM notify data
+	 *
+	 * @param message		the received message with GSPM notify data
+	 * @param initiator		if it's the initiator or responder
+	 * @return				the selected method as u_int16_t
+	 *
+	 */
+	u_int16_t (*get_selected_method)(gspm_manager_t *this,
+		message_t *message, bool initiator);
+
 	/**
 	 * Destroys a gspm_manager_t object.
 	 */

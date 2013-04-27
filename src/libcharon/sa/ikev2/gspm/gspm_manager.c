@@ -22,11 +22,10 @@
 typedef struct private_gspm_manager_t private_gspm_manager_t;
 typedef struct gspm_entry_t gspm_entry_t;
 
-ENUM(gspm_methodlist_names, GSPM_RESERVED, GSPM_SPSKA,
-	"GSPM_RESERVED",
-	"GSPM_PACE",
-	"GSPM_AUGPAKE",
-	"GSPM_SPSKA",
+ENUM(gspm_methodlist_names, GSPM_PACE, GSPM_SPSKA,
+	"PACE",
+	"AugPAKE",
+	"Secure PSK Authentication",
 );
 
 /**
@@ -65,16 +64,23 @@ struct private_gspm_manager_t {
 	linked_list_t *methods;
 
 	/**
+	 * list of unique registered methods;
+	 */
+	linked_list_t *reg_methods;
+
+	/**
 	 * rwlock to lock methods
 	 */
 	rwlock_t *lock;
 };
 
-chunk_t gspm_generate_chunk()
+chunk_t chunk_from_method(u_int16_t method_id)
 {
 	chunk_t chunk;
+	u_int16_t method;
 
-	chunk = gspm_generate_chunk_from_method(GSPM_PACE);
+	method = htons(method_id);
+	chunk = chunk_from_thing(method);
 
 	/** need to clone on heap, cause on stack byteorder changes after
 	 * return (compiler, kernel...)
@@ -82,47 +88,65 @@ chunk_t gspm_generate_chunk()
 	return chunk_clone(chunk);
 }
 
-chunk_t gspm_generate_chunk_from_method(u_int16_t method_id)
+METHOD(gspm_manager_t, get_notify_chunk, chunk_t,
+	private_gspm_manager_t *this)
 {
 	chunk_t chunk;
-	u_int16_t method;
 
-	method = method_id;
-	method = htons(method);
-	chunk = chunk_from_thing(method);
+	chunk = chunk_from_method(GSPM_PACE);
+	chunk = chunk_cat("cc", chunk, chunk_from_method(GSPM_AUGPAKE));
 
 	return chunk_clone(chunk);
 }
 
-u_int16_t gspm_select_method(message_t *message, bool initiator){
+METHOD(gspm_manager_t, get_notify_chunk_from_method, chunk_t,
+	private_gspm_manager_t *this, u_int16_t method_id)
+{
+	chunk_t chunk;
+
+	chunk = chunk_from_method(method_id);
+
+	return chunk_clone(chunk);
+}
+
+METHOD(gspm_manager_t, get_selected_method, u_int16_t,
+	private_gspm_manager_t *this, message_t *message, bool initiator)
+{
 	notify_payload_t *notify_payload;
+	u_int16_t method;
 	chunk_t data;
 	int len;
-	u_int16_t method, method_e, chosen_method;
-	enumerator_t *method_enumerator;
 
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 	data = notify_payload->get_notification_data(notify_payload);
 
-	method = ntohs(*(u_int16_t*) data.ptr);
-	return method;
-
-	/**
-	else
+	if(!initiator && data.len > 2)
 	{
-		DBG1(DBG_IKE, "GSPM chunk len: %d", data.len);
-		for(len = 0; len < data.len/2; len++)
+		for(len = 0; len < data.len; len += 2)
 		{
+			data.ptr += len;
 			method = ntohs(*(u_int16_t*) data.ptr);
 			DBG1(DBG_IKE, "GSPM method in chunk: %d", method);
-			if(method == GSPM_PACE)
-			{
-				return GSPM_PACE;
+			switch (method) {
+				case GSPM_PACE:
+					return GSPM_PACE;
+				case GSPM_AUGPAKE:
+					return GSPM_AUGPAKE;
+				case GSPM_SPSKA:
+					return GSPM_SPSKA;
+				default:
+					break;
 			}
-			chunk_increment(data);
 		}
 	}
-	**/
+	else
+	{
+		if(data.len == 2)
+		{
+			method = ntohs(*(u_int16_t*) data.ptr);
+			return method;
+		}
+	}
 	return 0;
 }
 
@@ -177,7 +201,6 @@ METHOD(gspm_manager_t, create_instance, gspm_method_t*,
 	{
 		if (method_id == entry->method_id && verifier == entry->verifier)
 		{
-			DBG1(DBG_IKE, "GSPM manger method_id found");
 			method = entry->constructor(
 					verifier, ike_sa,
 					received_nonce, sent_nonce,
@@ -209,9 +232,13 @@ gspm_manager_t *gspm_manager_create()
 				.add_method = _add_method,
 				.remove_method = _remove_method,
 				.create_instance = _create_instance,
+				.get_notify_chunk = _get_notify_chunk,
+				.get_selected_method = _get_selected_method,
+				.get_notify_chunk_from_method = _get_notify_chunk_from_method,
 				.destroy = _destroy,
 			},
 			.methods = linked_list_create(),
+			.reg_methods = 	linked_list_create(),
 			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 

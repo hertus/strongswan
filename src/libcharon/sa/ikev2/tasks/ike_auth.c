@@ -24,7 +24,6 @@
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/eap_payload.h>
 #include <encoding/payloads/nonce_payload.h>
-#include <sa/ikev2/gspm/gspm_manager.h>
 #include <sa/ikev2/authenticators/eap_authenticator.h>
 #include <sa/ikev2/authenticators/gspm_authenticator.h>
 
@@ -435,7 +434,7 @@ METHOD(task_t, build_i, status_t,
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
-					gspm_generate_chunk());
+					charon->gspm->get_notify_chunk(charon->gspm));
 		}
 
 		return collect_my_init_data(this, message);
@@ -580,7 +579,12 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify from initiator found");
-			this->gspm_method_selected = gspm_select_method(message, FALSE);
+			this->gspm_method_selected = charon->gspm->
+				get_selected_method(charon->gspm, message, FALSE);
+			if(this->gspm_method_selected)
+			{
+				return FAILED;
+			}
 		}
 		return collect_other_init_data(this, message);
 	}
@@ -767,9 +771,11 @@ METHOD(task_t, build_r, status_t,
 		/**PACE build notify responder with choosen method*/
 		if (this->gspm_method_selected)
 		{
-			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_method_selcted: %d", this->gspm_method_selected);
+			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_method_selected: %d",
+				this->gspm_method_selected);
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
-					gspm_generate_chunk_from_method(this->gspm_method_selected));
+				charon->gspm->get_notify_chunk_from_method(
+					charon->gspm, this->gspm_method_selected));
 		}
 		return collect_my_init_data(this, message);
 	}
@@ -948,7 +954,12 @@ METHOD(task_t, process_i, status_t,
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
 			DBG1(DBG_IKE, "GSPM Type in notify from responder found");
-			this->gspm_method_selected = gspm_select_method(message, TRUE);
+			this->gspm_method_selected = charon->gspm->
+				get_selected_method(charon->gspm, message, TRUE);
+			if(this->gspm_method_selected == 0)
+			{
+				return FAILED;
+			}
 		}
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED) &&
 			multiple_auth_enabled())

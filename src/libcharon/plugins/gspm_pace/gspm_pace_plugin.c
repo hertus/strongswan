@@ -41,6 +41,7 @@ METHOD(plugin_t, destroy, void,
 		private_gspm_pace_plugin_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &gspm_pace_listener->listener);
+	charon->gspm->remove_method(charon->gspm, (gspm_method_constructor_t) gspm_method_pace_create);
 	gspm_pace_listener->destroy(gspm_pace_listener);
 	free(this);
 }
@@ -61,9 +62,9 @@ plugin_t *gspm_pace_plugin_create()
 
 	gspm_pace_listener = gspm_pace_listener_create(),
 	charon->bus->add_listener(charon->bus, &gspm_pace_listener->listener);
-	charon->gspm->add_method(charon->gspm, GSPM_PACE, false,
+	charon->gspm->add_method(charon->gspm, GSPM_PACE, FALSE,
 			(gspm_method_constructor_t) gspm_method_pace_create);
-	charon->gspm->add_method(charon->gspm, GSPM_PACE, true,
+	charon->gspm->add_method(charon->gspm, GSPM_PACE, TRUE,
 			(gspm_method_constructor_t) gspm_method_pace_create);
 
 	return &this->public.plugin;
