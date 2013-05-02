@@ -39,11 +39,6 @@ struct gspm_entry_t {
 	u_int16_t method_id;
 
 	/**
-	 * method is verifier or builder
-	 */
-	bool verifier;
-
-	/**
 	 * constructor function to create instance
 	 */
 	gspm_method_constructor_t constructor;
@@ -64,11 +59,6 @@ struct private_gspm_manager_t {
 	linked_list_t *methods;
 
 	/**
-	 * list of unique registered methods;
-	 */
-	linked_list_t *reg_methods;
-
-	/**
 	 * rwlock to lock methods
 	 */
 	rwlock_t *lock;
@@ -83,8 +73,7 @@ chunk_t chunk_from_method(u_int16_t method_id)
 	chunk = chunk_from_thing(method);
 
 	/** need to clone on heap, cause on stack byteorder changes after
-	 * return (compiler, kernel...)
-	 */
+	 * return (compiler, kernel...)	 */
 	return chunk_clone(chunk);
 }
 
@@ -92,9 +81,18 @@ METHOD(gspm_manager_t, get_notify_chunk, chunk_t,
 	private_gspm_manager_t *this)
 {
 	chunk_t chunk;
+	enumerator_t *enumerator;
+	gspm_entry_t *entry;
 
-	chunk = chunk_from_method(GSPM_PACE);
-	chunk = chunk_cat("cc", chunk, chunk_from_method(GSPM_AUGPAKE));
+	chunk = chunk_empty;
+	this->lock->read_lock(this->lock);
+	enumerator = this->methods->create_enumerator(this->methods);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		chunk = chunk_cat("cc", chunk, chunk_from_method(entry->method_id));
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	return chunk_clone(chunk);
 }
@@ -113,6 +111,8 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 	private_gspm_manager_t *this, message_t *message, bool initiator)
 {
 	notify_payload_t *notify_payload;
+	enumerator_t *enumerator;
+	gspm_entry_t *entry;
 	u_int16_t method;
 	chunk_t data;
 	int len;
@@ -120,31 +120,57 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 	notify_payload = message->get_notify(message, SECURE_PASSWORD_METHOD);
 	data = notify_payload->get_notification_data(notify_payload);
 
-	if(!initiator && data.len > 2)
+	if(data.len >= 2)
 	{
-		for(len = 0; len < data.len; len += 2)
+		if(!initiator)
 		{
-			data.ptr += len;
-			method = ntohs(*(u_int16_t*) data.ptr);
-			DBG1(DBG_IKE, "GSPM method in chunk: %d", method);
-			switch (method) {
-				case GSPM_PACE:
-					return GSPM_PACE;
-				case GSPM_AUGPAKE:
-					return GSPM_AUGPAKE;
-				case GSPM_SPSKA:
-					return GSPM_SPSKA;
-				default:
-					break;
+			for(len = 0; len < data.len; len += 2)
+			{
+				data.ptr += len;
+				method = ntohs(*(u_int16_t*) data.ptr);
+
+				this->lock->read_lock(this->lock);
+				enumerator = this->methods->create_enumerator(this->methods);
+				while (enumerator->enumerate(enumerator, &entry))
+				{
+					if(method == entry->method_id)
+					{
+						DBG1(DBG_IKE, "GSPM method %N is selected",
+							gspm_methodlist_names, method);
+						return method;
+					}
+				}
+				enumerator->destroy(enumerator);
+				this->lock->unlock(this->lock);
 			}
+			DBG1(DBG_IKE, "GSPM no supported method found");
+			return 0;
 		}
-	}
-	else
-	{
-		if(data.len == 2)
+		/**
+		 * Method already selected by the responder
+		 */
+		else
 		{
-			method = ntohs(*(u_int16_t*) data.ptr);
-			return method;
+			if(data.len == 2)
+			{
+				method = ntohs(*(u_int16_t*) data.ptr);
+
+				this->lock->read_lock(this->lock);
+				enumerator = this->methods->create_enumerator(this->methods);
+				while (enumerator->enumerate(enumerator, &entry))
+				{
+					if(method == entry->method_id)
+					{
+						DBG1(DBG_IKE, "GSPM method %N has been selected",
+							gspm_methodlist_names, method);
+						return method;
+					}
+				}
+				enumerator->destroy(enumerator);
+				this->lock->unlock(this->lock);
+				DBG1(DBG_IKE, "GSPM no supported method has been selected");
+				return 0;
+			}
 		}
 	}
 	return 0;
@@ -153,12 +179,11 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 
 METHOD(gspm_manager_t, add_method, void,
 	private_gspm_manager_t *this, u_int16_t method_id,
-	bool verifier, gspm_method_constructor_t constructor)
+	gspm_method_constructor_t constructor)
 {
 	gspm_entry_t *entry = malloc_thing(gspm_entry_t);
 
 	entry->method_id = method_id;
-	entry->verifier = verifier;
 	entry->constructor = constructor;
 
 	this->lock->write_lock(this->lock);
@@ -199,7 +224,7 @@ METHOD(gspm_manager_t, create_instance, gspm_method_t*,
 	enumerator = this->methods->create_enumerator(this->methods);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (method_id == entry->method_id && verifier == entry->verifier)
+		if (method_id == entry->method_id)
 		{
 			method = entry->constructor(
 					verifier, ike_sa,
@@ -238,7 +263,6 @@ gspm_manager_t *gspm_manager_create()
 				.destroy = _destroy,
 			},
 			.methods = linked_list_create(),
-			.reg_methods = 	linked_list_create(),
 			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 

@@ -581,8 +581,9 @@ METHOD(task_t, process_r, status_t,
 			DBG1(DBG_IKE, "GSPM Type in notify from initiator found");
 			this->gspm_method_selected = charon->gspm->
 				get_selected_method(charon->gspm, message, FALSE);
-			if(this->gspm_method_selected)
+			if(this->gspm_method_selected == 0)
 			{
+				DBG1(DBG_IKE, "GSPM no Type in notify supported");
 				return FAILED;
 			}
 		}
@@ -958,6 +959,7 @@ METHOD(task_t, process_i, status_t,
 				get_selected_method(charon->gspm, message, TRUE);
 			if(this->gspm_method_selected == 0)
 			{
+				DBG1(DBG_IKE, "GSPM selected Type not supported");
 				return FAILED;
 			}
 		}

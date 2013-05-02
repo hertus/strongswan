@@ -29,17 +29,22 @@ typedef struct gspm_authenticator_t gspm_authenticator_t;
 /**
  * Implementation of authenticator_t using generic secure password method
  *
-
- Initiator                         							Responder
- --------------------------------------------------------------------
- HDR(SPIi=xxx, SPIr=0, IKE_SA_INIT,
- Flags: Initiator, Message ID=0),
- SAi1, KEi, Ni, [N(SECURE_PASSWORD_METHODS)]  -->
-
-						 <--  	HDR(SPIi=xxx, SPIr=yyy, IKE_SA_INIT,
-									 Flags: Response, Message ID=0),
-											Ar1, KEr, Nr, [CERTREQ],
-
+Initiator                         									Responder
+-----------------------------------------------------------------------------
+HDR(SPIi=xxx, SPIr=yyy, IKE_AUTH,
+   Flags: Initiator, Message ID=1),
+   SK {IDi, [CERTREQ,] GSPM, [GSPM, ...,]
+   [IDr,] SAi2, TSi, TSr}  -->
+								 <--  HDR(SPIi=xxx, SPIr=yyy, IKE_AUTH, Flags:
+										Response, Message ID=1),
+										SK {IDr, [CERT,] GSPM, [GSPM, ...]}
+HDR(SPIi=xxx, SPIr=yyy, IKE_AUTH,
+   Flags: Initiator, Message ID=2),
+   SK {GSPM, [GSPM, ...,]}  -->
+								 <--  HDR(SPIi=xxx, SPIr=yyy, IKE_AUTH, Flags:
+										Response, Message ID=2),
+										SK {GSPM, [GSPM, ...]}
+...
  */
 struct gspm_authenticator_t
 {

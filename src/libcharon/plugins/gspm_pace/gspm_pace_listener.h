@@ -47,7 +47,7 @@ struct gspm_pace_listener_t {
 	 * @param ike_sa	ike_sa from round
 	 * @return			iffie_hellman_t object
 	 */
-	diffie_hellman_t* (*get_dh)(gspm_pace_listener_t *this, ike_sa_t *ike_sa);
+	chunk_t (*get_shared_secret)(gspm_pace_listener_t *this, ike_sa_t *ike_sa);
 };
 
 /**

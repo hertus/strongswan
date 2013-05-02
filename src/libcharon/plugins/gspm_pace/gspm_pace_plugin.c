@@ -62,9 +62,7 @@ plugin_t *gspm_pace_plugin_create()
 
 	gspm_pace_listener = gspm_pace_listener_create(),
 	charon->bus->add_listener(charon->bus, &gspm_pace_listener->listener);
-	charon->gspm->add_method(charon->gspm, GSPM_PACE, FALSE,
-			(gspm_method_constructor_t) gspm_method_pace_create);
-	charon->gspm->add_method(charon->gspm, GSPM_PACE, TRUE,
+	charon->gspm->add_method(charon->gspm, GSPM_PACE,
 			(gspm_method_constructor_t) gspm_method_pace_create);
 
 	return &this->public.plugin;

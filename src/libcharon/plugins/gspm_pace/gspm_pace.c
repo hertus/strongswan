@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
+#include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/gspm_payload.h>
@@ -71,34 +72,25 @@ struct private_gspm_method_pace_t {
 
 };
 
-METHOD(gspm_method_t, build, status_t,
+METHOD(gspm_method_t, build_initiator, status_t,
 		private_gspm_method_pace_t *this, message_t *message)
 {
-	gspm_payload_t *gspm_payload;
-	chunk_t gspm_data, shs;
-	diffie_hellman_t *dh;
-
-	DBG1(DBG_IKE, "GSPM PACE build");
-
-	dh = gspm_pace_listener->get_dh(gspm_pace_listener, this->ike_sa);
-
-	if(dh)
-	{
-		dh->get_shared_secret(dh, &shs);
-		DBG1(DBG_IKE, "GSPM PACE found a DH: %d", shs.ptr);
-	}
-
-	//dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM);
-
-	gspm_data = chunk_empty;
-	gspm_payload = gspm_payload_create();
-	gspm_payload->set_data(gspm_payload, gspm_data);
-	chunk_free(&gspm_data);
-	message->add_payload(message, (payload_t*)gspm_payload);
 	return NEED_MORE;
 }
 
-METHOD(gspm_method_t, process, status_t,
+METHOD(gspm_method_t, process_responder, status_t,
+		private_gspm_method_pace_t *this, message_t *message)
+{
+	return NEED_MORE;
+}
+
+METHOD(gspm_method_t, build_responder, status_t,
+		private_gspm_method_pace_t *this, message_t *message)
+{
+	return NEED_MORE;
+}
+
+METHOD(gspm_method_t, process_initiator, status_t,
 		private_gspm_method_pace_t *this, message_t *message)
 {
 	return NEED_MORE;
@@ -121,21 +113,42 @@ gspm_method_pace_t *gspm_method_pace_create(
 {
 	private_gspm_method_pace_t *this;
 
-	INIT(this,
-		.public = {
-			.gspm_method = {
-				.build = _build,
-				.process = _process,
-				.destroy = _destroy,
+	if(verifier)
+	{
+		INIT(this,
+			.public = {
+				.gspm_method = {
+					.build = _build_responder,
+					.process = _process_responder,
+					.destroy = _destroy,
+				},
 			},
-		},
-		.pace_verifier = verifier,
-		.ike_sa = ike_sa,
-		.received_nonce = received_nonce,
-		.sent_nonce = sent_nonce,
-		.received_init = received_init,
-		.sent_init = sent_init,
-	);
+			.pace_verifier = verifier,
+			.ike_sa = ike_sa,
+			.received_nonce = received_nonce,
+			.sent_nonce = sent_nonce,
+			.received_init = received_init,
+			.sent_init = sent_init,
+		);
+	}
+	else
+	{
+		INIT(this,
+			.public = {
+				.gspm_method = {
+					.build = _build_initiator,
+					.process = _process_initiator,
+					.destroy = _destroy,
+				},
+			},
+			.pace_verifier = verifier,
+			.ike_sa = ike_sa,
+			.received_nonce = received_nonce,
+			.sent_nonce = sent_nonce,
+			.received_init = received_init,
+			.sent_init = sent_init,
+		);
+	}
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
 	return &this->public;

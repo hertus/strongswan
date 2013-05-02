@@ -29,12 +29,8 @@
 typedef enum  gspm_methodlist_t gspm_methodlist_t;
 typedef struct gspm_manager_t gspm_manager_t;
 
-/** IANA secure password methods
- *
- * 1	P A C E
- * 2	AugPAKE
- * 3	Secure PSK Authentication
- * ...
+/**
+ * IANA secure password methods
  */
 enum gspm_methodlist_t {
 	GSPM_PACE = 1,
@@ -49,16 +45,16 @@ extern enum_name_t *gspm_methodlist_names;
 
 struct gspm_manager_t {
 	/**
-	 * Register a GSPM method implementation.
+	 * Register a GSPM method constructor implementation.
 	 *
-	 * @param method_id		IANA number of the GSPM method
-	 * @param constructor	constructor function, returns an gspm_method_t
+	 * @param method_id			IANA number of the GSPM method
+	 * @param constructor		constructor function, returns an gspm_method_t
 	 */
 	void (*add_method)(gspm_manager_t *this, u_int16_t method_id,
-			bool verifier, gspm_method_constructor_t constructor);
+			gspm_method_constructor_t constructor);
 
 	/**
-	 * Unregister a GSPM method implementation using it's constructor.
+	 * Unregister a GSPM method constructor implementation using it's constructor.
 	 *
 	 * @param constructor	constructor function to remove
 	 */
@@ -68,8 +64,15 @@ struct gspm_manager_t {
 	/**
 	 * Create a new GSPM method instance.
 	 *
-	 * @param method_id		type of the GSPM method, IANA number of the method
-	 * @return				GSPM method instance, NULL if no constructor found
+	 * @param method_id			type of the method, IANA number of the method
+	 * @param verifier			if authenticator is verifier oder builder
+	 * @param ike_sa			associated ike_sa
+	 * @param received_nonce	nonce received in IKE_SA_INIT
+	 * @param sent_nonce		nonce sent in IKE_SA_INIT
+	 * @param received_init		received IKE_SA_INIT message data
+	 * @param sent_init			sent IKE_SA_INIT message data
+	 * @param reserved          reserved bytes of ID payload
+	 * @return					method instance, NULL if no constructor found
 	 */
 	gspm_method_t* (*create_instance)(gspm_manager_t *this, u_int16_t method_id,
 			bool verifier, ike_sa_t *ike_sa, chunk_t received_nonce,
@@ -78,15 +81,15 @@ struct gspm_manager_t {
 	/**
 	 * Gets notify chunk with GSPM methods.
 	 *
-	 * @return				chunk_t with all methods as u_int16_t
+	 * @return					chunk_t with all methods as u_int16_t
 	 */
 	chunk_t (*get_notify_chunk)(gspm_manager_t *this);
 
 	/**
 	 * Gets notify chunk with GSPM methods.
 	 *
-	 * @param				method id as u_int16_t
-	 * @return				chunk_t with all methods as u_int16_t
+	 * @param					method id as u_int16_t
+	 * @return					chunk_t with all methods as u_int16_t
 	 */
 	chunk_t (*get_notify_chunk_from_method)(gspm_manager_t *this,
 		u_int16_t method_id);
@@ -95,9 +98,9 @@ struct gspm_manager_t {
 	 * Gets the selected GSPM method from a list of methods in a message with
 	 * GSPM notify data
 	 *
-	 * @param message		the received message with GSPM notify data
-	 * @param initiator		if it's the initiator or responder
-	 * @return				the selected method as u_int16_t
+	 * @param message			the received message with GSPM notify data
+	 * @param initiator			if it's the initiator or responder
+	 * @return					the selected method as u_int16_t
 	 *
 	 */
 	u_int16_t (*get_selected_method)(gspm_manager_t *this,
@@ -112,15 +115,15 @@ struct gspm_manager_t {
 /**
  * Create a new notify chunk for all supported GSPM method.
  *
- * @return				chunk_t with all supported GSPM methods
+ * @return					chunk_t with all supported GSPM methods
  */
 chunk_t gspm_generate_chunk();
 
 /**
  * Create a new notify chunk with given method number.
  *
- * @param method_id		IANA number of the GSPM method
- * @return				chunk_t with selected GSPM method
+ * @param method_id			IANA number of the GSPM method
+ * @return					chunk_t with selected GSPM method
  */
 chunk_t gspm_generate_chunk_from_method(u_int16_t method_id);
 
@@ -128,9 +131,9 @@ chunk_t gspm_generate_chunk_from_method(u_int16_t method_id);
  * Selects a method from given message chunk in notify,
  * returns the selected method number
  *
- * @param message		message_t from a received message with notify GSPM
- * @param initiator		if called from a initiator = true or a responder = false
- * @return				u_int16_t from selected GSPM method number
+ * @param message			message_t from a received message with notify GSPM
+ * @param initiator			if called from a initiator=true or responder=false
+ * @return					u_int16_t from selected GSPM method number
  */
 u_int16_t gspm_select_method(message_t *message, bool initiator);
 
