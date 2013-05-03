@@ -65,6 +65,13 @@
 #define MAX_NAT_D_PAYLOADS 5
 
 /**
+ * Max number of GSMP payloads per IKEv2 message
+ * The number of GSPM payloads is up to the
+ * secure password method but usually will be less than 3
+ */
+#define MAX_GSMP_PAYLOADS 3
+
+/**
  * A payload rule defines the rules for a payload
  * in a specific message rule. It defines if and how
  * many times a payload must/can occur in a message
@@ -177,6 +184,8 @@ static payload_order_t ike_sa_init_r_order[] = {
 static payload_rule_t ike_auth_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
+	{GENERIC_SECURE_PASSWORD_METHOD,0,	MAX_GSMP_PAYLOADS,		TRUE,	TRUE},
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
 	{ID_INITIATOR,					0,	1,						TRUE,	FALSE},
@@ -217,10 +226,13 @@ static payload_order_t ike_auth_i_order[] = {
 	{SECURITY_ASSOCIATION,			0},
 	{TRAFFIC_SELECTOR_INITIATOR,	0},
 	{TRAFFIC_SELECTOR_RESPONDER,	0},
+	{GENERIC_SECURE_PASSWORD_METHOD,0},
+	{KEY_EXCHANGE,					0},
 	{NOTIFY,						MOBIKE_SUPPORTED},
 	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
 	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
 	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
+	{NOTIFY,						PSK_PERSIST},
 	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
@@ -231,6 +243,8 @@ static payload_order_t ike_auth_i_order[] = {
 static payload_rule_t ike_auth_r_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
+	{GENERIC_SECURE_PASSWORD_METHOD,0,	MAX_GSMP_PAYLOADS,		TRUE,	TRUE},
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
 	{CERTIFICATE,					0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
@@ -259,11 +273,14 @@ static payload_order_t ike_auth_r_order[] = {
 	{SECURITY_ASSOCIATION,			0},
 	{TRAFFIC_SELECTOR_INITIATOR,	0},
 	{TRAFFIC_SELECTOR_RESPONDER,	0},
+	{GENERIC_SECURE_PASSWORD_METHOD,0},
+	{KEY_EXCHANGE,					0},
 	{NOTIFY,						AUTH_LIFETIME},
 	{NOTIFY,						MOBIKE_SUPPORTED},
 	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
 	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
 	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
+	{NOTIFY,						PSK_CONFIRM},
 	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
