@@ -18,3 +18,4 @@ libstrongswan_gspm_pace_la_SOURCES = \
 	gspm_pace_listener.c gspm_pace_listener.h
 
 libstrongswan_gspm_pace_la_LDFLAGS = -module -avoid-version
+libstrongswan_gspm_pace_la_LIBADD  = -lgmp

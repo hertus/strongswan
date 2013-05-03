@@ -109,11 +109,6 @@ static encoding_rule_t encodings[] = {
    * method-specific subtype field
  */
 
-METHOD(payload_t, has_subtype, bool, private_gspm_payload_t *this)
-{
-	return true;
-}
-
 METHOD(payload_t, verify, status_t,
 	private_gspm_payload_t *this)
 {
@@ -136,7 +131,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_gspm_payload_t *this)
 {
-	return AUTHENTICATION;
+	return GENERIC_SECURE_PASSWORD_METHOD;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,

@@ -54,23 +54,6 @@ struct gspm_payload_t {
 	chunk_t (*get_data) (gspm_payload_t *this);
 
 	/**
-	 * checks if payload contains subtype
-	 */
-	bool (*has_subtype) (gspm_payload_t *this);
-
-	/**
-	 * set the method-specific subtype (if required by GSPM method)
-	 *
-	 * @param message	subtype specific to GSPM method
-	 */
-	void (*set_subtype) (gspm_payload_t *this, chunk_t data);
-
-	/**
-	 * get the method-specific subtype
-	 */
-	chunk_t (*get_subtype) (gspm_payload_t *this);
-
-	/**
 	 * destroys a GSPM payload object
 	 *
 	 */

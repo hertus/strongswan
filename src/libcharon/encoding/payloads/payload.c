@@ -242,6 +242,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)configuration_attribute_create(type);
 		case EXTENSIBLE_AUTHENTICATION:
 			return (payload_t*)eap_payload_create();
+		case GENERIC_SECURE_PASSWORD_METHOD:
+			return (payload_t*)gspm_payload_create();
 		case ENCRYPTED:
 		case ENCRYPTED_V1:
 			return (payload_t*)encryption_payload_create(type);
