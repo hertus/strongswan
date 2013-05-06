@@ -125,7 +125,7 @@ METHOD(payload_t, get_encoding_rules, int,
 METHOD(payload_t, get_header_length, int,
 	private_gspm_payload_t *this)
 {
-	return 8;
+	return 4;
 }
 
 METHOD(payload_t, get_type, payload_type_t,

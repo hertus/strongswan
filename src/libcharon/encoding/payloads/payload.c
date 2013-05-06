@@ -263,7 +263,7 @@ bool payload_is_known(payload_type_t type)
 	{
 		return TRUE;
 	}
-	if (type >= SECURITY_ASSOCIATION && type <= EXTENSIBLE_AUTHENTICATION)
+	if (type >= SECURITY_ASSOCIATION && type <= GENERIC_SECURE_PASSWORD_METHOD)
 	{
 		return TRUE;
 	}

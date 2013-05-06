@@ -65,11 +65,11 @@
 #define MAX_NAT_D_PAYLOADS 5
 
 /**
- * Max number of GSMP payloads per IKEv2 message
+ * Max number of GSPM payloads per IKEv2 message
  * The number of GSPM payloads is up to the
  * secure password method but usually will be less than 3
  */
-#define MAX_GSMP_PAYLOADS 3
+#define MAX_GSPM_PAYLOADS 3
 
 /**
  * A payload rule defines the rules for a payload
@@ -185,7 +185,7 @@ static payload_rule_t ike_auth_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
-	{GENERIC_SECURE_PASSWORD_METHOD,0,	MAX_GSMP_PAYLOADS,		TRUE,	TRUE},
+	{GENERIC_SECURE_PASSWORD_METHOD,0,	MAX_GSPM_PAYLOADS,		TRUE,	TRUE},
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
 	{ID_INITIATOR,					0,	1,						TRUE,	FALSE},
@@ -232,7 +232,6 @@ static payload_order_t ike_auth_i_order[] = {
 	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
 	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
 	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
-	{NOTIFY,						PSK_PERSIST},
 	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
@@ -244,7 +243,7 @@ static payload_rule_t ike_auth_r_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{NOTIFY,						0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{KEY_EXCHANGE,					0,	1,						TRUE,	FALSE},
-	{GENERIC_SECURE_PASSWORD_METHOD,0,	MAX_GSMP_PAYLOADS,		TRUE,	TRUE},
+	{GENERIC_SECURE_PASSWORD_METHOD,0,	MAX_GSPM_PAYLOADS,		TRUE,	TRUE},
 	{EXTENSIBLE_AUTHENTICATION,		0,	1,						TRUE,	TRUE},
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
 	{CERTIFICATE,					0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
@@ -280,7 +279,6 @@ static payload_order_t ike_auth_r_order[] = {
 	{NOTIFY,						ADDITIONAL_IP4_ADDRESS},
 	{NOTIFY,						ADDITIONAL_IP6_ADDRESS},
 	{NOTIFY,						NO_ADDITIONAL_ADDRESSES},
-	{NOTIFY,						PSK_CONFIRM},
 	{NOTIFY,						0},
 	{VENDOR_ID,						0},
 };
