@@ -307,7 +307,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		/**
 		 * creating NONCE s - size 32 octets
 		 * nonce not weak -> mb rng with STRONG
-		 */
+		 *
 		nonceg = lib->crypto->create_nonce_gen(lib->crypto);
 		if(!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->s))
 		{
@@ -316,6 +316,20 @@ METHOD(gspm_method_t, build_initiator, status_t,
 			return FAILED;
 		}
 		nonceg->destroy(nonceg);
+		 */
+		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+		if (!rng)
+		{
+			DBG1(DBG_IKE, "GSPM PACE no RNG found");
+			return FAILED;
+		}
+		if(!rng->allocate_bytes(rng, NONCE_SIZE, &this->s))
+		{
+			DBG1(DBG_IKE, "GSPM PACE no random nonce s");
+			rng->destroy(rng);
+			return FAILED;
+		}
+		rng->destroy(rng);
 
 		/**
 		 * Encrypting the NONCE
