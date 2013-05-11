@@ -14,8 +14,6 @@
 
 #include "gspm_payload.h"
 
-#include <bio/bio_writer.h>
-
 typedef struct private_gspm_payload_t private_gspm_payload_t;
 
 /**

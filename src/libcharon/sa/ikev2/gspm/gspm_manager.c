@@ -72,8 +72,10 @@ chunk_t chunk_from_method(u_int16_t method_id)
 	method = htons(method_id);
 	chunk = chunk_from_thing(method);
 
-	/** need to clone on heap, cause on stack byteorder changes after
-	 * return (compiler, kernel...)	 */
+	/**
+	 * need to clone on heap, cause byteorder changes on stack after
+	 * return (compiler, kernel...)
+	 */
 	return chunk_clone(chunk);
 }
 
@@ -144,7 +146,7 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 				this->lock->unlock(this->lock);
 			}
 			DBG1(DBG_IKE, "GSPM no supported method found");
-			return 0;
+			goto fail;
 		}
 		/**
 		 * Method already selected by the responder
@@ -169,10 +171,13 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 				enumerator->destroy(enumerator);
 				this->lock->unlock(this->lock);
 				DBG1(DBG_IKE, "GSPM no supported method has been selected");
-				return 0;
+				goto fail;
 			}
 		}
 	}
+
+	fail:
+	chunk_free(&data);
 	return 0;
 }
 
@@ -226,6 +231,7 @@ METHOD(gspm_manager_t, create_instance, gspm_method_t*,
 	{
 		if (method_id == entry->method_id)
 		{
+			DBG1(DBG_IKE, "GSPM found method instance: %d", method_id);
 			method = entry->constructor(
 					verifier, ike_sa,
 					received_nonce, sent_nonce,
@@ -245,6 +251,8 @@ METHOD(gspm_manager_t, create_instance, gspm_method_t*,
 METHOD(gspm_manager_t, destroy, void,
 	private_gspm_manager_t *this)
 {
+	this->methods->destroy_function(this->methods, free);
+	DESTROY_IF(this->lock);
 	free(this);
 }
 

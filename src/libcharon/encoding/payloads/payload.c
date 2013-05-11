@@ -37,6 +37,7 @@
 #include <encoding/payloads/eap_payload.h>
 #include <encoding/payloads/hash_payload.h>
 #include <encoding/payloads/fragment_payload.h>
+#include <encoding/payloads/gspm_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 
 ENUM_BEGIN(payload_type_names, NO_PAYLOAD, NO_PAYLOAD,

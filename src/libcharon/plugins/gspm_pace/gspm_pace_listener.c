@@ -13,7 +13,6 @@
  */
 
 #include "gspm_pace_listener.h"
-#include "src/libcharon/sa/ikev2/gspm/gspm_manager.h"
 
 #include <errno.h>
 #include <daemon.h>
@@ -120,7 +119,6 @@ METHOD(listener_t, message, bool, private_gspm_pace_listener_t *this,
 						get_notification_data(notify_payload).ptr);
 				if(method == GSPM_PACE)
 				{
-					DBG1(DBG_IKE, "GSPM Listener incoming PACE SPI");
 					hash = create_spi_hash(id);
 					dh_entry = malloc_thing(dh_entry_t);
 					dh_entry->ike_sa_id = id->clone(id);
@@ -132,6 +130,19 @@ METHOD(listener_t, message, bool, private_gspm_pace_listener_t *this,
 	}
 	else
 	{	/** Reponder has selected method and send his notify */
+		if (incoming && message->get_exchange_type(message) == IKE_SA_INIT)
+		{
+			notify_payload = message->get_notify(message,
+				SECURE_PASSWORD_METHOD);
+			if(notify_payload)
+			{
+				hash = create_spi_hash(id);
+				dh_entry = malloc_thing(dh_entry_t);
+				dh_entry->ike_sa_id = id->clone(id);
+				this->dh_objects->put(this->dh_objects, (void*)hash,
+					dh_entry);
+			}
+		}
 		if (!incoming && message->get_exchange_type(message) == IKE_SA_INIT)
 		{
 			notify_payload = message->get_notify(message,
@@ -140,14 +151,11 @@ METHOD(listener_t, message, bool, private_gspm_pace_listener_t *this,
 			{
 				method = ntohs(*(u_int16_t*) notify_payload->
 						get_notification_data(notify_payload).ptr);
-				if(method == GSPM_PACE)
+				if(method != GSPM_PACE)
 				{
-					DBG1(DBG_IKE, "GSPM Listener not incoming PACE SPI");
 					hash = create_spi_hash(id);
-					dh_entry = malloc_thing(dh_entry_t);
-					dh_entry->ike_sa_id = id->clone(id);
-					this->dh_objects->put(this->dh_objects, (void*)hash,
-						dh_entry);
+					DBG1(DBG_IKE, "GSPM Listener was not GSPM PACE with hash: %d", hash);
+					this->dh_objects->remove(this->dh_objects, (void*)hash);
 				}
 			}
 		}

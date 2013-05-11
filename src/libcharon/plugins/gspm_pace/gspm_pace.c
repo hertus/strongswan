@@ -78,30 +78,6 @@ struct private_gspm_method_pace_t {
 	 */
 	char reserved[3];
 
-	/**
-	 * Signalize if it's round 1 or 2
-	 */
-	bool round2;
-
-	/**
-	 * other is authenticated
-	 */
-	bool authenticated;
-
-	/**
-	 * GSPM method completed
-	 */
-	bool method_complete;
-
-	/**
-	 * Encrpytion settings
-	 */
-	u_int16_t prf_algorithm, enc_algorithm, enc_keysize, dh_group;
-
-	/**
-	 * random nonce s
-	 */
-	chunk_t s;
 
 	/**
 	 * new DH with GE
@@ -122,6 +98,47 @@ struct private_gspm_method_pace_t {
 	 * other public key from DH
 	 */
 	chunk_t other_pke;
+
+	/**
+	 * random nonce s
+	 */
+	chunk_t s;
+
+	/**
+	 * Signalize if it's round 1 or 2
+	 */
+	bool round_two;
+
+	/**
+	 * other is authenticated
+	 */
+	bool authenticated;
+
+	/**
+	 * GSPM method completed
+	 */
+	bool method_complete;
+
+	/**
+	 * PRF algorithm
+	 */
+	u_int16_t prf_algorithm;
+
+	/**
+	 * Encrpytion algorithm
+	 */
+	u_int16_t enc_algorithm;
+
+	/**
+	 * Encryption keysize
+	 */
+	u_int16_t enc_keysize;
+
+	/**
+	 * DH group from IKE_SA_INIT
+	 */
+	u_int16_t dh_group;
+
 };
 
 /**
@@ -137,6 +154,7 @@ chunk_t mpz_to_chunk(const mpz_t value)
 	{	/* if we have zero in "value", gmp returns NULL */
 		n.len = 0;
 	}
+
 	return n;
 }
 
@@ -173,7 +191,7 @@ bool prf_kpwd(private_gspm_method_pace_t *this, chunk_t key, chunk_t nonce_i,
 {
 	prf_t *prf;
 	prf_plus_t *prfp;
-	chunk_t pace_seed, spwd, nonce_seed;
+	chunk_t pace_seed, nonce_seed, spwd;
 
 	prf = lib->crypto->create_prf(lib->crypto, this->prf_algorithm);
 
@@ -181,33 +199,33 @@ bool prf_kpwd(private_gspm_method_pace_t *this, chunk_t key, chunk_t nonce_i,
 	nonce_seed = chunk_cat("cc", nonce_i, nonce_r);
 
 	/* SPwd = prf("IKE with PACE", Pwd) */
-	if (prf->set_key(prf, key) &&
-		prf->allocate_bytes(prf, pace_seed, &spwd) &&
-		prf->set_key(prf, spwd))
-	{
-		DBG1(DBG_IKE, "GSPM PACE initiated PRF with: %N",
-			pseudo_random_function_names, this->prf_algorithm);
-
-		/**
-		 * KPwd = prf+(Ni | Nr, SPwd)
-		 * KPwd length determined by encryption key length
-		 */
-		prfp = prf_plus_create(prf, TRUE, nonce_seed);
-		if(!prfp->allocate_bytes(prfp, this->enc_keysize / 8, kpwd))
-		{
-			DBG1(DBG_IKE, "GSPM PACE failed creating prf+");
-			prfp->destroy(prfp);
-			return FALSE;
-		}
-		prfp->destroy(prfp);
-	}
-	else
+	if (!prf->set_key(prf, key) ||
+		!prf->allocate_bytes(prf, pace_seed, &spwd) ||
+		!prf->set_key(prf, spwd))
 	{
 		DBG1(DBG_IKE, "GSPM PACE failed creating prf");
 		prf->destroy(prf);
 		return FALSE;
 	}
+	DBG1(DBG_IKE, "GSPM PACE initiated PRF with: %N",
+		pseudo_random_function_names, this->prf_algorithm);
+
+	/**
+	 * KPwd = prf+(Ni | Nr, SPwd)
+	 * KPwd length determined by encryption key length
+	 */
+	prfp = prf_plus_create(prf, TRUE, nonce_seed);
+	if(!prfp->allocate_bytes(prfp, this->enc_keysize / 8, kpwd))
+	{
+		DBG1(DBG_IKE, "GSPM PACE failed creating prf+");
+		chunk_free(&spwd);
+		prf->destroy(prf);
+		prfp->destroy(prfp);
+		return FALSE;
+	}
+	chunk_free(&spwd);
 	prf->destroy(prf);
+	prfp->destroy(prfp);
 	return TRUE;
 }
 
@@ -220,9 +238,12 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 	diffie_hellman_params_t *dh_param;
 	chunk_t new_ge;
 
-	/**
-	 * New DH round
-	 */
+	mpz_init(g);
+	mpz_init(ge);
+	mpz_init(p);
+	mpz_init(nonce_s);
+	mpz_init(sa_secret);
+
 	this->shared_secret = gspm_pace_listener->get_shared_secret(
 		gspm_pace_listener, this->ike_sa);
 	if(!(this->shared_secret.len > 0))
@@ -232,15 +253,6 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 	}
 	DBG1(DBG_IKE, "GSPM PACE IKE_INIT shared secret found");
 	dh_param = diffie_hellman_get_params(this->dh_group);
-
-	/**
-	 * Initialize MPZ values
-	 */
-	mpz_init(g);
-	mpz_init(ge);
-	mpz_init(p);
-	mpz_init(nonce_s);
-	mpz_init(sa_secret);
 
 	mpz_import(g, dh_param->generator.len, 1, 1, 1, 0, dh_param->generator.ptr);
 	mpz_import(p, dh_param->prime.len, 1, 1, 1, 0, dh_param->prime.ptr);
@@ -260,8 +272,7 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 	 * Mapping the NONCE if DH is Modular
 	 * GE = G^s * SASharedSecret
 	 * since prime is part of G^s -> G^s mod(p)
-	 * SharedSecret is part of g^ir
-	 * -> G^(s+ir) mod(p)
+	 * SharedSecret is part of g^ir -> GE mod(p)
 	 */
 	else
 	{
@@ -284,6 +295,7 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 	 */
 	this->dh_ge = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM,
 		new_ge, dh_param->prime);
+	chunk_free(&new_ge);
 
 	return TRUE;
 }
@@ -294,53 +306,62 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	identification_t *id, chunk_t init, chunk_t nonce, chunk_t pke)
 {
-	keymat_v2_t *keymat;
-	chunk_t auth_octets;
 	prf_t *prf;
 	prf_plus_t *prfp;
-	chunk_t pace_shared_secret;
-	chunk_t prf_seed, prf_key, nonce_seed;
+	keymat_v2_t *keymat;
+	chunk_t auth_octets, pace_shared_secret, prf_seed, prf_key, nonce_seed;
+
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	keymat->get_auth_octets(keymat, FALSE, init, nonce,
+		id, this->reserved, &auth_octets);
 
 	/**
 	 * Create AUTHir
 	 * 	AUTHir = prf(prf+(Ni | Nr, PACESharedSecret),
   	 * 	<InitiatorSignedOctets> | PKEir)
 	 */
-	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	keymat->get_auth_octets(keymat, FALSE, init, nonce,
-		id, this->reserved, &auth_octets);
-
+	prf_key = chunk_cat("mc", auth_octets, pke);
+	nonce_seed = chunk_cat("cc", this->sent_nonce, this->received_nonce);
 
 	if(!this->dh_ge->get_shared_secret(this->dh_ge, &pace_shared_secret))
 	{
 		DBG1(DBG_IKE, "GSPM PACE could get shared secret");
-		return FALSE;
+		return FAILED;
 	}
-
-	prf = lib->crypto->create_prf(lib->crypto, this->prf_algorithm);
-	prf_key = chunk_cat("mc", auth_octets, pke);
-	nonce_seed = chunk_cat("cc", this->sent_nonce, this->received_nonce);
 
 	/**
 	 * prf+(Ni | Nr, PACESharedSecret)
 	 */
-	if (!prf->set_key(prf,
-		pace_shared_secret))
+	prf = lib->crypto->create_prf(lib->crypto, this->prf_algorithm);
+	if (!prf)
 	{
+		DBG1(DBG_IKE, "GSPM PACE no prf created");
+		chunk_free(&pace_shared_secret);
+		return FAILED;
+	}
+	if(!prf->set_key(prf, pace_shared_secret))
+	{
+		DBG1(DBG_IKE, "GSPM PACE prf failed to set key");
+		chunk_free(&pace_shared_secret);
 		prf->destroy(prf);
-		return FALSE;
+		return FAILED;
 	}
 
 	DBG1(DBG_IKE, "GSPM PACE initiated PRF with: %N",
 		pseudo_random_function_names, this->prf_algorithm);
 
 	prfp = prf_plus_create(prf, TRUE, nonce_seed);
-	if(!prfp->allocate_bytes(prfp,
-		pace_shared_secret.len, &prf_seed))
+	if(!prfp)
 	{
-		DBG1(DBG_IKE, "GSPM PACE failed creating prf+");
+		DBG1(DBG_IKE, "GSPM PACE no prf+ created");
+		chunk_free(&pace_shared_secret);
+		return FAILED;	}
+	if(!prfp->allocate_bytes(prfp, pace_shared_secret.len, &prf_seed))
+	{
+		DBG1(DBG_IKE, "GSPM PACE failed allocating prf+");
+		chunk_free(&pace_shared_secret);
 		prfp->destroy(prfp);
-		return FALSE;
+		return FAILED;
 	}
 
 	/**
@@ -350,17 +371,20 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	if(!prf->set_key(prf, prf_key) ||
 		!prf->allocate_bytes(prf, prf_seed, auth_data))
 	{
+		DBG1(DBG_IKE, "GSPM PACE failed allocating prf for AUTH");
+		chunk_free(&pace_shared_secret);
+		chunk_free(&prf_seed);
+		prfp->destroy(prfp);
 		prf->destroy(prf);
-		return FALSE;
+		return FAILED;
 	}
 
-	chunk_free(&prf_key);
-	chunk_free(&nonce_seed);
+	chunk_free(&prf_seed);
 	chunk_free(&pace_shared_secret);
 	prfp->destroy(prfp);
 	prf->destroy(prf);
-
 	return TRUE;
+
 }
 
 bool verify_auth(private_gspm_method_pace_t *this, message_t *message)
@@ -380,35 +404,38 @@ bool verify_auth(private_gspm_method_pace_t *this, message_t *message)
 		this->received_init, this->received_nonce, this->my_pke))
 	{
 		DBG1(DBG_IKE, "GSPM PACE couldn't create auth data");
+		chunk_free(&recv_auth_data);
+		return FALSE;
+	}
+	if(!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
+	{
+		chunk_free(&auth_data);
+		chunk_free(&recv_auth_data);
 		return FALSE;
 	}
 
-	if(!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
-	{
-		return FALSE;
-	}
 	this->authenticated = TRUE;
+
+	chunk_free(&auth_data);
+	chunk_free(&recv_auth_data);
+
 	return TRUE;
 }
 
 METHOD(gspm_method_t, build_initiator, status_t,
 		private_gspm_method_pace_t *this, message_t *message)
 {
+	ke_payload_t *ke_payload;
+	auth_payload_t *auth_payload;
 	gspm_payload_t *gspm_payload;
-	chunk_t gspm_data;
+	chunk_t gspm_data, enonce, iv, kpwd, auth_data;
 	identification_t *my_id, *other_id;
 	shared_key_t *shared_key;
-	chunk_t enonce, iv;
 	rng_t *rng;
 	u_int8_t st;
 	crypter_t *crypter;
-	chunk_t kpwd;
-	chunk_t subtype;
-	ke_payload_t *ke_payload;
-	auth_payload_t *auth_payload;
-	chunk_t auth_data;
 
-	if(!this->round2)
+	if(!this->round_two)
 	{
 		DBG1(DBG_IKE, "GSPM PACE build i round #1");
 
@@ -422,26 +449,24 @@ METHOD(gspm_method_t, build_initiator, status_t,
 			 my_id, gspm_methodlist_names, GSPM_PACE);
 
 		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id, other_id);
+		if(!shared_key)
+		{
+			DBG1(DBG_IKE, "GSPM PACE failed to get shared key");
+			return FAILED;
+		}
 
 		if(!prf_kpwd(this, shared_key->get_key(shared_key), this->sent_nonce,
 			this->received_nonce, &kpwd))
 		{
 			DBG1(DBG_IKE, "GSPM PACE failed creating KPwd");
+			shared_key->destroy(shared_key);
 			return FAILED;
 		}
+		shared_key->destroy(shared_key);
 
 		/**
 		 * creating NONCE s - size 32 octets
-		 * nonce not weak -> mb rng with STRONG
-		 *
-		nonceg = lib->crypto->create_nonce_gen(lib->crypto);
-		if(!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->s))
-		{
-			DBG1(DBG_IKE, "GSPM PACE nonce allocation failed");
-			nonceg->destroy(nonceg);
-			return FAILED;
-		}
-		nonceg->destroy(nonceg);
+		 * nonce not weak -> don't use noncegen, use rng with STRONG
 		 */
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 		if (!rng)
@@ -465,6 +490,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		{
 			DBG1(DBG_IKE, "GSPM PACE KPwd is not in keysize, kpwd: %d, keysize: %d bytes",
 				kpwd.len, this->enc_keysize / 8);
+			chunk_free(&kpwd);
 			return FAILED;
 		}
 		DBG1(DBG_IKE, "GSPM PACE KPwd is in keysize, kpwd: %d, keysize: %d bytes",
@@ -474,7 +500,6 @@ METHOD(gspm_method_t, build_initiator, status_t,
 
 		crypter = lib->crypto->create_crypter(lib->crypto, this->enc_algorithm,
 			this->enc_keysize / 8);
-
 		if(!crypter)
 		{
 			DBG1(DBG_IKE, "GSPM PACE failed creating crypter");
@@ -501,9 +526,11 @@ METHOD(gspm_method_t, build_initiator, status_t,
 			!crypter->encrypt(crypter, this->s, iv, &enonce))
 		{
 			DBG1(DBG_IKE, "GSPM PACE failed encrypting the nonce");
+			chunk_free(&kpwd);
 			crypter->destroy(crypter);
 			return FAILED;
 		}
+		chunk_free(&kpwd);
 		crypter->destroy(crypter);
 
 		DBG1(DBG_IKE, "GSPM PACE ENONCE created with len: %d",
@@ -511,10 +538,11 @@ METHOD(gspm_method_t, build_initiator, status_t,
 
 		/**
 		 * GSPM Payload
+		 * PACE_Reserved Subtype is 0
 		 */
-		st = 0;
-		subtype = chunk_from_thing(st);
-		gspm_data = chunk_cat("mmm", subtype, iv, enonce);
+
+		/* gspm_data = subtype | IV | ENONCE */
+		gspm_data = chunk_cat("mmm", chunk_from_thing(st), iv, enonce);
 		gspm_payload = gspm_payload_create();
 		gspm_payload->set_data(gspm_payload, gspm_data);
 		chunk_free(&gspm_data);
@@ -525,12 +553,16 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		 */
 		if(!create_new_dh_ge(this))
 		{
+			DBG1(DBG_IKE, "GSPM PACE creating new DH failed");
 			return FAILED;
 		}
 
 		DBG1(DBG_IKE, "GSPM PACE new DH created");
 
+
+		this->dh_ge = lib->crypto->create_dh(lib->crypto, this->dh_group);
 		this->dh_ge->get_my_public_value(this->dh_ge, &this->my_pke);
+
 		ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE,
 			this->dh_ge);
 		message->add_payload(message, (payload_t*)ke_payload);
@@ -561,7 +593,6 @@ METHOD(gspm_method_t, build_initiator, status_t,
 
 		return NEED_MORE;
 	}
-
 }
 
 METHOD(gspm_method_t, process_responder, status_t,
@@ -569,24 +600,29 @@ METHOD(gspm_method_t, process_responder, status_t,
 {
 	gspm_payload_t *gspm_payload;
 	ke_payload_t *ke_payload;
-	chunk_t recv_gspm_data, subtype, iv, enonce;
+	chunk_t recv_gspm_data, iv, enonce, kpwd;
 	identification_t *my_id, *other_id;
 	shared_key_t *shared_key;
-	chunk_t kpwd;
+	u_int8_t st;
 	crypter_t *crypter;
-	bio_reader_t *br;
+	bio_reader_t *reader;
 
 	if(!message->get_payload(message, AUTHENTICATION))
 	{
 		DBG1(DBG_IKE, "GSPM PACE process r round #1");
 
 		gspm_payload = (gspm_payload_t*)message->get_payload(message,
-			SECURE_PASSWORD_METHOD);
-		ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE);
-
-		if(!gspm_payload || !ke_payload)
+			GENERIC_SECURE_PASSWORD_METHOD);
+		if(!gspm_payload )
 		{
-			DBG1(DBG_IKE, "GSPM PACE failed to get payload data");
+			DBG1(DBG_IKE, "GSPM PACE failed to get gspm payload data");
+			return FAILED;
+		}
+
+		ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE);
+		if(!ke_payload)
+		{
+			DBG1(DBG_IKE, "GSPM PACE failed to get ke payload data");
 			return FAILED;
 		}
 
@@ -600,13 +636,19 @@ METHOD(gspm_method_t, process_responder, status_t,
 			 my_id, gspm_methodlist_names, GSPM_PACE);
 
 		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id, other_id);
-
+		if(!shared_key)
+		{
+			DBG1(DBG_IKE, "GSPM PACE failed to get shared key");
+			return FAILED;
+		}
 		if(!prf_kpwd(this, shared_key->get_key(shared_key), this->received_nonce,
 			this->sent_nonce, &kpwd))
 		{
 			DBG1(DBG_IKE, "GSPM PACE failed creating KPwd");
+			shared_key->destroy(shared_key);
 			return FAILED;
 		}
+		shared_key->destroy(shared_key);
 
 		map_cm_encr(this);
 
@@ -615,7 +657,6 @@ METHOD(gspm_method_t, process_responder, status_t,
 		 */
 		crypter = lib->crypto->create_crypter(lib->crypto, this->enc_algorithm,
 			this->enc_keysize / 8);
-
 		if(!crypter)
 		{
 			DBG1(DBG_IKE, "GSPM PACE failed creating crypter");
@@ -625,24 +666,26 @@ METHOD(gspm_method_t, process_responder, status_t,
 		iv.len = crypter->get_iv_size(crypter);
 		recv_gspm_data = gspm_payload->get_data(gspm_payload);
 
-		br = bio_reader_create(recv_gspm_data);
-		if(!br->read_data8(br, &subtype) ||
-			!br->read_data(br, iv.len, &iv) ||
-			!br->read_data(br, br->remaining(br), &enonce))
+		reader = bio_reader_create(recv_gspm_data);
+		if(!reader->read_uint8(reader, &st) ||
+			!reader->read_data(reader, iv.len, &iv) ||
+			!reader->read_data(reader, reader->remaining(reader), &enonce))
 		{
-			br->destroy(br);
+			DBG1(DBG_IKE, "GSPM PACE reading gspm_data failed");
+			reader->destroy(reader);
 			return FAILED;
 		}
-		br->destroy(br);
+		reader->destroy(reader);
 
 		/**
 		 * Fail if state value in GSPM payload is not pace_reserved = 0
 		 */
-		if(*(u_int8_t*) subtype.ptr != 0)
+		DBG1(DBG_IKE, "GSPM PACE subtype is: %d", st);
+		if(st != 0)
 		{
+			DBG1(DBG_IKE, "GSPM PACE subtype not PACE RESERVED");
 			return FAILED;
 		}
-		chunk_free(&subtype);
 
 		if(!crypter->set_key(crypter, kpwd) ||
 			!crypter->decrypt(crypter, enonce, iv, &this->s))
@@ -655,12 +698,15 @@ METHOD(gspm_method_t, process_responder, status_t,
 
 		if(!create_new_dh_ge(this))
 		{
+			DBG1(DBG_IKE, "GSPM PACE creating new DH failed");
 			return FAILED;
 		}
 
 		this->dh_ge->get_my_public_value(this->dh_ge, &this->my_pke);
 		this->other_pke = ke_payload->get_key_exchange_data(ke_payload);
 		this->dh_ge->set_other_public_value(this->dh_ge, this->other_pke);
+
+		DBG1(DBG_IKE, "GSPM PACE set other PKE");
 
 		return NEED_MORE;
 	}
@@ -669,6 +715,7 @@ METHOD(gspm_method_t, process_responder, status_t,
 		DBG1(DBG_IKE, "GSPM PACE process r round #2");
 		if(!verify_auth(this, message))
 		{
+			DBG1(DBG_IKE, "GSPM PACE couldn't verify auth");
 			return FAILED;
 		}
 		return NEED_MORE;
@@ -682,10 +729,15 @@ METHOD(gspm_method_t, build_responder, status_t,
 	auth_payload_t *auth_payload;
 	chunk_t auth_data;
 
-	if(!this->round2)
+	if(!this->round_two)
 	{
 		DBG1(DBG_IKE, "GSPM PACE build r round #1");
 		ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE, this->dh_ge);
+		if(!ke_payload)
+		{
+			DBG1(DBG_IKE, "GSPM PACE failed to create KE payload");
+			return FAILED;
+		}
 		message->add_payload(message, (payload_t*)ke_payload);
 		return NEED_MORE;
 	}
@@ -726,12 +778,18 @@ METHOD(gspm_method_t, process_initiator, status_t,
 	if(!message->get_payload(message, AUTHENTICATION))
 	{
 		DBG1(DBG_IKE, "GSPM PACE process i round #1");
+
 		ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE);
+		if(!ke_payload)
+		{
+			DBG1(DBG_IKE, "GSPM PACE failed to get ke payload data");
+			return FAILED;
+		}
 
 		this->other_pke = ke_payload->get_key_exchange_data(ke_payload);
 		this->dh_ge->set_other_public_value(this->dh_ge, this->other_pke);
 
-		this->round2 = TRUE;
+		this->round_two = TRUE;
 
 		return NEED_MORE;
 	}
@@ -740,6 +798,7 @@ METHOD(gspm_method_t, process_initiator, status_t,
 		DBG1(DBG_IKE, "GSPM PACE process i round #2");
 		if(!verify_auth(this, message))
 		{
+			DBG1(DBG_IKE, "GSPM PACE couldn't verify auth");
 			return FAILED;
 		}
 		return NEED_MORE;
@@ -750,6 +809,11 @@ METHOD(gspm_method_t, process_initiator, status_t,
 METHOD(gspm_method_t, destroy, void,
 		private_gspm_method_pace_t *this)
 {
+	DESTROY_IF(this->dh_ge);
+	chunk_free(&this->my_pke);
+	chunk_free(&this->other_pke);
+	chunk_free(&this->shared_secret);
+	chunk_free(&this->s);
 	free(this);
 }
 
@@ -817,6 +881,8 @@ gspm_method_pace_t *gspm_method_pace_create(
 		&this->dh_group, NULL);
 	DBG1(DBG_IKE, "GSPM PACE DH group is: %N",
 		diffie_hellman_group_names, this->dh_group);
+
+	this->round_two = FALSE;
 
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
