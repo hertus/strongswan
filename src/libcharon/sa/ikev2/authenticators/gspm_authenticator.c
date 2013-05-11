@@ -82,19 +82,21 @@ struct private_gspm_authenticator_t
 METHOD(authenticator_t, build_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	auth_cfg_t *auth;
+	if(!this->initiator_method)
+	{
+		auth_cfg_t *auth;
 
-	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	this->gspm_method_selected = (uintptr_t) auth->
-			get(auth, AUTH_RULE_GSPM_METHOD);
+		auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+		this->gspm_method_selected = (uintptr_t) auth->
+				get(auth, AUTH_RULE_GSPM_METHOD);
 
-	DBG1(DBG_IKE,"GSPM auth build_i method: %d", this->gspm_method_selected);
+		DBG1(DBG_IKE,"GSPM auth build_i method: %d", this->gspm_method_selected);
 
-	this->initiator_method = charon->gspm->create_instance(
-			charon->gspm, this->gspm_method_selected, FALSE,
-			this->ike_sa, this->received_nonce, this->sent_nonce,
-			this->received_init, this->sent_init, this->reserved);
-
+		this->initiator_method = charon->gspm->create_instance(
+				charon->gspm, this->gspm_method_selected, FALSE,
+				this->ike_sa, this->received_nonce, this->sent_nonce,
+				this->received_init, this->sent_init, this->reserved);
+	}
 	if(!this->initiator_method)
 	{
 		DBG1(DBG_IKE,"GSPM failed creating build_initiator instance");
@@ -106,19 +108,21 @@ METHOD(authenticator_t, build_initiator, status_t,
 METHOD(authenticator_t, process_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	auth_cfg_t *auth;
+	if(!this->responder_method)
+	{
+		auth_cfg_t *auth;
 
-	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-	this->gspm_method_selected = (uintptr_t) auth->
-			get(auth, AUTH_RULE_GSPM_METHOD);
+		auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+		this->gspm_method_selected = (uintptr_t) auth->
+				get(auth, AUTH_RULE_GSPM_METHOD);
 
-	DBG1(DBG_IKE,"GSPM auth process_r method: %d", this->gspm_method_selected);
+		DBG1(DBG_IKE,"GSPM auth process_r method: %d", this->gspm_method_selected);
 
-	this->responder_method = charon->gspm->create_instance(
-				charon->gspm, this->gspm_method_selected, TRUE,
-				this->ike_sa, this->received_nonce, this->sent_nonce,
-				this->received_init, this->sent_init, this->reserved);
-
+		this->responder_method = charon->gspm->create_instance(
+					charon->gspm, this->gspm_method_selected, TRUE,
+					this->ike_sa, this->received_nonce, this->sent_nonce,
+					this->received_init, this->sent_init, this->reserved);
+	}
 	if(!this->responder_method)
 	{
 		DBG1(DBG_IKE,"GSPM failed creating process_responder instance");

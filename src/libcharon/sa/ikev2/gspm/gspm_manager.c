@@ -231,7 +231,6 @@ METHOD(gspm_manager_t, create_instance, gspm_method_t*,
 	{
 		if (method_id == entry->method_id)
 		{
-			DBG1(DBG_IKE, "GSPM found method instance: %d", method_id);
 			method = entry->constructor(
 					verifier, ike_sa,
 					received_nonce, sent_nonce,

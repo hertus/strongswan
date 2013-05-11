@@ -782,9 +782,13 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				ke_payload = (ke_payload_t*)payload;
 				if (!this->initiator)
 				{
+					/*
+					 * TODO problem with GSPM
+
 					this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 					this->dh = this->keymat->keymat.create_dh(
 										&this->keymat->keymat, this->dh_group);
+					*/
 				}
 				if (this->dh)
 				{

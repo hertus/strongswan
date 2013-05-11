@@ -387,29 +387,26 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 }
 
 /**
- * PACE check and add notify data for GSPM
- * on process_r - peer_cfg is null, my_auth also null, no auth_cfg available
+ * check and add notify data for GSPM
  */
-
 static bool gspm_auth_enabled(private_ike_auth_t *this)
 {
-	peer_cfg_t *pcfg;
-	auth_cfg_t *acfg;
+	peer_cfg_t *peer_cfg;
+	auth_cfg_t *auth_cfg;
 	enumerator_t *auth_enum;
-	uintptr_t ar;
+	uintptr_t auth_rule;
 	bool found;
 
 	found = FALSE;
-	pcfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if(pcfg)
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if(peer_cfg)
 	{
-		auth_enum = pcfg->create_auth_cfg_enumerator(pcfg, TRUE);
-		while (auth_enum->enumerate(auth_enum, &acfg))
+		auth_enum = peer_cfg->create_auth_cfg_enumerator(peer_cfg, TRUE);
+		while (auth_enum->enumerate(auth_enum, &auth_cfg))
 		{
-			ar = (uintptr_t) acfg->get(acfg, AUTH_RULE_AUTH_CLASS);
-			if (ar == AUTH_CLASS_GSPM)
+			auth_rule = (uintptr_t) auth_cfg->get(auth_cfg, AUTH_RULE_AUTH_CLASS);
+			if (auth_rule == AUTH_CLASS_GSPM)
 			{
-				DBG1(DBG_IKE, "GSPM AUTH_CLASS_GSPM found");
 				found = TRUE;
 				break;
 			}
@@ -430,7 +427,7 @@ METHOD(task_t, build_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/** PACE build and add GSPM notify if necessary*/
+		/** build and add GSPM notify if necessary*/
 		if (gspm_auth_enabled(this))
 		{
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
@@ -519,7 +516,7 @@ METHOD(task_t, build_i, status_t,
 			}
 		}
 
-		/**PACE add auth_rule for initiator*/
+		/** add auth_rule for GSPM initiator*/
 		if(this->gspm_method_selected)
 		{
 			cfg->add(cfg, AUTH_RULE_GSPM_METHOD, this->gspm_method_selected);
@@ -575,10 +572,9 @@ METHOD(task_t, process_r, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE process notify and get gspm methods in IKE_INIT */
+		/** process notify and get GSPM methods */
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
-			DBG1(DBG_IKE, "GSPM Type in notify from initiator found");
 			this->gspm_method_selected = charon->gspm->
 				get_selected_method(charon->gspm, message, FALSE);
 			if(this->gspm_method_selected == 0)
@@ -647,12 +643,10 @@ METHOD(task_t, process_r, status_t,
 			}
 		}
 
-		/**PACE set GSPM method auth rule specified, alternative to EAP with AUTH==NULL */
 		if (message->get_payload(message, AUTHENTICATION) == NULL)
 		{
 			if(this->gspm_method_selected)
 			{
-				DBG1(DBG_IKE, "GSPM method found, adding auth_cfg");
 				cfg->add(cfg, AUTH_RULE_GSPM_METHOD, this->gspm_method_selected);
 			}
 			else
@@ -769,11 +763,9 @@ METHOD(task_t, build_r, status_t,
 			message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
 								chunk_empty);
 		}
-		/**PACE build notify responder with choosen method*/
+		/** build GSPM notify responder with choosen method*/
 		if (this->gspm_method_selected)
 		{
-			DBG1(DBG_IKE, "GSPM ok in build_r, gspm_method_selected: %d",
-				this->gspm_method_selected);
 			message->add_notify(message, FALSE, SECURE_PASSWORD_METHOD,
 				charon->gspm->get_notify_chunk_from_method(
 					charon->gspm, this->gspm_method_selected));
@@ -876,7 +868,7 @@ METHOD(task_t, build_r, status_t,
 				goto peer_auth_failed;
 		}
 	}
-	if (this->my_auth)
+	if (this->my_auth && !this->gspm_method_selected)
 	{
 		switch (this->my_auth->build(this->my_auth, message))
 		{
@@ -951,10 +943,9 @@ METHOD(task_t, process_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		/**PACE get notify from responder back to choose method*/
+		/** get GSPM notify from responder to choose method*/
 		if (message->get_notify(message, SECURE_PASSWORD_METHOD))
 		{
-			DBG1(DBG_IKE, "GSPM Type in notify from responder found");
 			this->gspm_method_selected = charon->gspm->
 				get_selected_method(charon->gspm, message, TRUE);
 			if(this->gspm_method_selected == 0)
@@ -1041,7 +1032,8 @@ METHOD(task_t, process_i, status_t,
 			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 			cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
 
-			if (message->get_payload(message, AUTHENTICATION))
+			if (message->get_payload(message, AUTHENTICATION) &&
+				!this->gspm_method_selected)
 			{
 				/* verify authentication data */
 				this->other_auth = authenticator_create_verifier(this->ike_sa,
@@ -1056,8 +1048,11 @@ METHOD(task_t, process_i, status_t,
 			}
 			else
 			{
-				/* responder omitted AUTH payload, indicating EAP-only */
-				mutual_eap = TRUE;
+				if(!this->gspm_method_selected)
+				{
+					/* responder omitted AUTH payload, indicating EAP-only */
+					mutual_eap = TRUE;
+				}
 			}
 		}
 		if (this->other_auth)
