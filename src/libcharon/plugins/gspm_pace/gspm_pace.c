@@ -305,7 +305,7 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
  * prf function to create AUTH payload
  */
 bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
-	identification_t *id, chunk_t init, chunk_t nonce, chunk_t pke)
+	identification_t *id, chunk_t init, chunk_t nonce, chunk_t pke, bool verify)
 {
 	prf_t *prf;
 	prf_plus_t *prfp;
@@ -313,8 +313,10 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	chunk_t auth_octets, pace_shared_secret, prf_seed, prf_key, nonce_seed;
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	keymat->get_auth_octets(keymat, FALSE, init, nonce,
+	keymat->get_auth_octets(keymat, verify, init, nonce,
 		id, this->reserved, &auth_octets);
+
+	DBG1(DBG_IKE, "GSPM PACE auth_octet: %B", &auth_octets);
 
 	/**
 	 * Create AUTHir
@@ -322,7 +324,14 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
   	 * 	<InitiatorSignedOctets> | PKEir)
 	 */
 	prf_key = chunk_cat("mc", auth_octets, pke);
-	nonce_seed = chunk_cat("cc", this->sent_nonce, this->received_nonce);
+	if(verify)
+	{
+		nonce_seed = chunk_cat("cc", this->received_nonce, this->sent_nonce);
+	}
+	else
+	{
+		nonce_seed = chunk_cat("cc", this->sent_nonce, this->received_nonce);
+	}
 
 	if (!this->dh_ge->get_shared_secret(this->dh_ge, &pace_shared_secret) == SUCCESS)
 	{
@@ -355,20 +364,30 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	{
 		DBG1(DBG_IKE, "GSPM PACE no prf+ created");
 		chunk_free(&pace_shared_secret);
+		prf->destroy(prf);
 		return FAILED;
 	}
 	if(!prfp->allocate_bytes(prfp, pace_shared_secret.len, &prf_seed))
 	{
 		DBG1(DBG_IKE, "GSPM PACE failed allocating prf+");
 		chunk_free(&pace_shared_secret);
+		prf->destroy(prf);
 		prfp->destroy(prfp);
 		return FAILED;
 	}
+	prf->destroy(prf);
 
 	/**
 	 * prf(prf+(Ni | Nr, PACESharedSecret),
 	 *	<InitiatorSignedOctets> | PKEir)
 	 */
+	prf = lib->crypto->create_prf(lib->crypto, this->prf_algorithm);
+	if (!prf)
+	{
+		DBG1(DBG_IKE, "GSPM PACE no prf created");
+		chunk_free(&pace_shared_secret);
+		return FAILED;
+	}
 	if(!prf->set_key(prf, prf_key) ||
 		!prf->allocate_bytes(prf, prf_seed, auth_data))
 	{
@@ -400,15 +419,18 @@ bool verify_auth(private_gspm_method_pace_t *this, message_t *message)
 	}
 
 	recv_auth_data = auth_payload->get_data(auth_payload);
-	DBG1(DBG_IKE, "GSPM received_auth_data: %B", &recv_auth_data);
 
 	if(!prf_auth_data(this, &auth_data, this->ike_sa->get_other_id(this->ike_sa),
-		this->received_init, this->received_nonce, this->my_pke))
+		this->received_init, this->received_nonce, this->my_pke, TRUE))
 	{
 		DBG1(DBG_IKE, "GSPM PACE couldn't create auth data");
 		chunk_free(&recv_auth_data);
 		return FALSE;
 	}
+
+	DBG1(DBG_IKE, "GSPM PACE recv_auth_data: %B", &recv_auth_data);
+	DBG1(DBG_IKE, "GSPM PACE auth_data: %B", &auth_data);
+
 	if(!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
 		DBG1(DBG_IKE, "GSPM PACE auth_data invalid");
@@ -569,7 +591,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		DBG1(DBG_IKE, "GSPM PACE build i round#2");
 
 		if(!prf_auth_data(this, &auth_data, this->ike_sa->get_my_id(this->ike_sa),
-			this->sent_init, this->sent_nonce, this->other_pke))
+			this->sent_init, this->sent_nonce, this->other_pke, FALSE))
 		{
 			DBG1(DBG_IKE, "GSPM PACE couldn't create auth data");
 			return FAILED;
@@ -578,7 +600,6 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		auth_payload = auth_payload_create();
 		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
 		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
 		message->add_payload(message, (payload_t*)auth_payload);
 
 		/**
@@ -586,6 +607,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		message->add_notify(message, FALSE, PSK_PERSIST, chunk_empty);
 		 */
 
+		chunk_free(&auth_data);
 		return NEED_MORE;
 	}
 }
@@ -751,7 +773,7 @@ METHOD(gspm_method_t, build_responder, status_t,
 		DBG1(DBG_IKE, "GSPM PACE build r round #2");
 
 		if(!prf_auth_data(this, &auth_data, this->ike_sa->get_my_id(this->ike_sa),
-			this->sent_init, this->sent_nonce, this->other_pke))
+			this->sent_init, this->sent_nonce, this->other_pke, FALSE))
 		{
 			DBG1(DBG_IKE, "GSPM PACE couldn't create auth data");
 			return FAILED;
@@ -760,7 +782,6 @@ METHOD(gspm_method_t, build_responder, status_t,
 		auth_payload = auth_payload_create();
 		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
 		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
 		message->add_payload(message, (payload_t*)auth_payload);
 
 		/**
@@ -770,6 +791,7 @@ METHOD(gspm_method_t, build_responder, status_t,
 
 		this->method_complete = TRUE;
 
+		chunk_free(&auth_data);
 		return NEED_MORE;
 	}
 }
