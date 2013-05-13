@@ -78,7 +78,6 @@ struct private_gspm_method_pace_t {
 	 */
 	char reserved[3];
 
-
 	/**
 	 * new DH with GE
 	 */
@@ -103,16 +102,6 @@ struct private_gspm_method_pace_t {
 	 * Signalize if it's round 1 or 2
 	 */
 	bool round_two;
-
-	/**
-	 * other is authenticated
-	 */
-	bool authenticated;
-
-	/**
-	 * GSPM method completed
-	 */
-	bool method_complete;
 
 	/**
 	 * PRF algorithm
@@ -227,15 +216,9 @@ bool prf_kpwd(private_gspm_method_pace_t *this, chunk_t key, chunk_t nonce_i,
  */
 bool create_new_dh_ge(private_gspm_method_pace_t *this)
 {
-	mpz_t g, ge, p, nonce_s, sa_secret;
+	mpz_t g, ge, p, nonce_s, sa_secret, check1, check2, one;
 	diffie_hellman_params_t *dh_param;
 	chunk_t new_ge, shared_secret;
-
-	mpz_init(g);
-	mpz_init(ge);
-	mpz_init(p);
-	mpz_init(nonce_s);
-	mpz_init(sa_secret);
 
 	shared_secret = gspm_pace_listener->get_shared_secret(
 		gspm_pace_listener, this->ike_sa);
@@ -248,8 +231,14 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 
 	dh_param = diffie_hellman_get_params(this->dh_group);
 
-	DBG1(DBG_IKE, "GSPM PACE ss from init: %B", &shared_secret);
+	DBG1(DBG_IKE, "GSPM PACE secret from init: %B", &shared_secret);
 	DBG1(DBG_IKE, "GSPM PACE p from init: %B", &dh_param->prime);
+
+	mpz_init(g);
+	mpz_init(ge);
+	mpz_init(p);
+	mpz_init(nonce_s);
+	mpz_init(sa_secret);
 
 	mpz_import(g, dh_param->generator.len, 1, 1, 1, 0, dh_param->generator.ptr);
 	mpz_import(p, dh_param->prime.len, 1, 1, 1, 0, dh_param->prime.ptr);
@@ -263,6 +252,11 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 	if(diffie_hellman_group_is_ec(this->dh_group))
 	{
 		/** TODO implementation with OpenSSL*/
+
+		/**
+		 * checking values and fail if
+		 * GE = s*G + SASharedSecret
+		 */
 		return FALSE;
 	}
 	/**
@@ -277,6 +271,26 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 		mpz_powm_sec(ge, g, nonce_s, p);
 		mpz_mul(ge, ge, sa_secret);
 		mpz_mod(ge, ge, p);
+
+		/**
+		 * checking values and fail if
+		 * G^s = 1/SASharedSecret
+		 */
+		mpz_init(check1);
+		mpz_init(check2);
+		mpz_init_set_ui(one, 1);
+
+		mpz_powm_sec(check1, g, nonce_s, p);
+		mpz_div(check2, one, sa_secret);
+
+		if(mpz_cmp(check1, check2) == 0)
+		{
+			DBG1(DBG_IKE, "GSPM PACE failed checking values, try again");
+			mpz_clear(check1);
+			mpz_clear(check2);
+			mpz_clear(one);
+			return FALSE;
+		}
 	}
 
 	new_ge =  mpz_to_chunk(ge);
@@ -288,6 +302,9 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this)
 	mpz_clear(p);
 	mpz_clear(nonce_s);
 	mpz_clear(sa_secret);
+	mpz_clear(check1);
+	mpz_clear(check2);
+	mpz_clear(one);
 
 	/**
 	 * Create new DH with MODP_CUSTOM and chunk g, p
@@ -375,19 +392,11 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 		prfp->destroy(prfp);
 		return FAILED;
 	}
-	prf->destroy(prf);
 
 	/**
 	 * prf(prf+(Ni | Nr, PACESharedSecret),
 	 *	<InitiatorSignedOctets> | PKEir)
 	 */
-	prf = lib->crypto->create_prf(lib->crypto, this->prf_algorithm);
-	if (!prf)
-	{
-		DBG1(DBG_IKE, "GSPM PACE no prf created");
-		chunk_free(&pace_shared_secret);
-		return FAILED;
-	}
 	if(!prf->set_key(prf, prf_key) ||
 		!prf->allocate_bytes(prf, prf_seed, auth_data))
 	{
@@ -707,6 +716,9 @@ METHOD(gspm_method_t, process_responder, status_t,
 			!crypter->decrypt(crypter, enonce, iv, &this->s))
 		{
 			DBG1(DBG_IKE, "GSPM PACE failed decrypting the enonce");
+			chunk_free(&iv);
+			chunk_free(&enonce);
+			chunk_free(&kpwd);
 			crypter->destroy(crypter);
 			return FAILED;
 		}
@@ -732,6 +744,9 @@ METHOD(gspm_method_t, process_responder, status_t,
 		DBG1(DBG_IKE,"GSPM ss: %B", &ss);
 		chunk_free(&ss);
 
+		chunk_free(&iv);
+		chunk_free(&enonce);
+		chunk_free(&kpwd);
 		return NEED_MORE;
 	}
 	else
@@ -763,9 +778,7 @@ METHOD(gspm_method_t, build_responder, status_t,
 			return FAILED;
 		}
 		message->add_payload(message, (payload_t*)ke_payload);
-
 		this->round_two = TRUE;
-
 		return NEED_MORE;
 	}
 	else
@@ -782,17 +795,14 @@ METHOD(gspm_method_t, build_responder, status_t,
 		auth_payload = auth_payload_create();
 		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
 		auth_payload->set_data(auth_payload, auth_data);
+		chunk_free(&auth_data);
 		message->add_payload(message, (payload_t*)auth_payload);
 
 		/**
 		 * TODO if Long Term Secret is used
 		message->add_notify(message, FALSE, PSK_PERSIST, chunk_empty);
 		 */
-
-		this->method_complete = TRUE;
-
-		chunk_free(&auth_data);
-		return NEED_MORE;
+		return SUCCESS;
 	}
 }
 
@@ -832,7 +842,7 @@ METHOD(gspm_method_t, process_initiator, status_t,
 			DBG1(DBG_IKE, "GSPM PACE couldn't verify auth");
 			return FAILED;
 		}
-		return NEED_MORE;
+		return SUCCESS;
 	}
 
 }
