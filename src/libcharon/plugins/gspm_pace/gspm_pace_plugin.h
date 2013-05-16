@@ -29,9 +29,6 @@
 
 typedef struct gspm_pace_plugin_t gspm_pace_plugin_t;
 
-/**
- * PACE gspm_pace plugin
- */
 struct gspm_pace_plugin_t {
 
 	/**

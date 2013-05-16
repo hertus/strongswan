@@ -33,7 +33,6 @@ typedef enum auth_class_t auth_class_t;
  * it does not specify a method, but a class of acceptable methods. The found
  * certificate finally dictates which method is used.
  */
-/**PACE AUTH_CLASS and RULE for GSPM */
 enum auth_class_t {
 	/** any class acceptable */
 	AUTH_CLASS_ANY = 0,

@@ -27,9 +27,6 @@
 
 typedef struct gspm_pace_listener_t gspm_pace_listener_t;
 
-/**
- * PACE GSPM Listener
- */
 struct gspm_pace_listener_t {
 
 	/**

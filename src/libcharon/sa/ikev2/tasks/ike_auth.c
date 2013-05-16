@@ -413,10 +413,6 @@ static bool gspm_auth_enabled(private_ike_auth_t *this)
 		}
 		auth_enum->destroy(auth_enum);
 	}
-	else
-	{
-		DBG1(DBG_IKE, "GSPM AUTH_CLASS peer_cfg was null");
-	}
 	return found;
 }
 
@@ -579,7 +575,6 @@ METHOD(task_t, process_r, status_t,
 				get_selected_method(charon->gspm, message, FALSE);
 			if(this->gspm_method_selected == 0)
 			{
-				DBG1(DBG_IKE, "GSPM no Type in notify supported");
 				return FAILED;
 			}
 		}
@@ -950,7 +945,6 @@ METHOD(task_t, process_i, status_t,
 				get_selected_method(charon->gspm, message, TRUE);
 			if(this->gspm_method_selected == 0)
 			{
-				DBG1(DBG_IKE, "GSPM selected Type not supported");
 				return FAILED;
 			}
 		}
@@ -1046,14 +1040,6 @@ METHOD(task_t, process_i, status_t,
 					goto peer_auth_failed;
 				}
 			}
-			else
-			{
-				if(!this->gspm_method_selected)
-				{
-					/* responder omitted AUTH payload, indicating EAP-only */
-					mutual_eap = TRUE;
-				}
-			}
 		}
 		if (this->other_auth)
 		{
@@ -1076,7 +1062,7 @@ METHOD(task_t, process_i, status_t,
 			goto peer_auth_failed;
 		}
 
-		if (!mutual_eap)
+		if (!mutual_eap && !this->gspm_method_selected)
 		{
 			apply_auth_cfg(this, FALSE);
 		}

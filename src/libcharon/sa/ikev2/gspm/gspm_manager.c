@@ -137,15 +137,16 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 				{
 					if(method == entry->method_id)
 					{
-						DBG1(DBG_IKE, "GSPM method %N is selected",
-							gspm_methodlist_names, method);
+						DBG1(DBG_IKE, "%N method %N selected", auth_class_names,
+							AUTH_CLASS_GSPM, gspm_methodlist_names, method);
 						return method;
 					}
 				}
 				enumerator->destroy(enumerator);
 				this->lock->unlock(this->lock);
 			}
-			DBG1(DBG_IKE, "GSPM no supported method found");
+			DBG1(DBG_IKE, "no supported %N method found",
+				auth_class_names, AUTH_CLASS_GSPM);
 			goto fail;
 		}
 		/**
@@ -163,14 +164,16 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 				{
 					if(method == entry->method_id)
 					{
-						DBG1(DBG_IKE, "GSPM method %N has been selected",
-							gspm_methodlist_names, method);
+						DBG1(DBG_IKE, "%N method %N has been "
+							"selected by responder", auth_class_names,
+							AUTH_CLASS_GSPM, gspm_methodlist_names, method);
 						return method;
 					}
 				}
 				enumerator->destroy(enumerator);
 				this->lock->unlock(this->lock);
-				DBG1(DBG_IKE, "GSPM no supported method has been selected");
+				DBG1(DBG_IKE, "no supported %N method has been selected",
+					auth_class_names, AUTH_CLASS_GSPM);
 				goto fail;
 			}
 		}

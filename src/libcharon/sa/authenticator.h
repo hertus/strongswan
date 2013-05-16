@@ -75,7 +75,6 @@ enum auth_method_t {
 	AUTH_ECDSA_521 = 11,
 
 	/**
-	 * PACE GSPM authenticator method
 	 * Generic Secure Password Authentication Method as specified in RFC 6467
 	 */
 	AUTH_GSPM = 12,

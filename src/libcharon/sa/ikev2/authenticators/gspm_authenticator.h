@@ -17,8 +17,6 @@
  * @{ @ingroup authenticators_v2
  */
 
-/** PACE authenticator implementation header */
-
 #ifndef GSPM_AUTHENTICATOR_H_
 #define GSPM_AUTHENTICATOR_H_
 

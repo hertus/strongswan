@@ -154,7 +154,6 @@ METHOD(listener_t, message, bool, private_gspm_pace_listener_t *this,
 				if(method != GSPM_PACE)
 				{
 					hash = create_spi_hash(id);
-					DBG1(DBG_IKE, "GSPM Listener was not GSPM PACE with hash: %d", hash);
 					this->dh_objects->remove(this->dh_objects, (void*)hash);
 				}
 			}
@@ -185,7 +184,6 @@ METHOD(listener_t, ike_keys, bool,	private_gspm_pace_listener_t *this,
 			{
 				if(dh->get_shared_secret(dh, &dh_entry->shared_secret) == SUCCESS)
 				{
-					DBG1(DBG_IKE, "GSPM Listener copied shared secret");
 					this->dh_objects->put(this->dh_objects, (void*)hash,
 						dh_entry);
 				}

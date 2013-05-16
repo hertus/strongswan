@@ -17,8 +17,6 @@
  * @{ @ingroup gspm
  */
 
-/**PACE gspm manager for registered gspm_method constructors from plugins */
-
 #ifndef GSPM_MANAGER_H_
 #define GSPM_MANAGER_H_
 

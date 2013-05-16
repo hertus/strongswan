@@ -26,8 +26,6 @@ typedef struct gspm_method_t gspm_method_t;
 
 
 /**
- * PACE GSPM method interface implemented by the various authenticators.
- *
  * An method implementation handles AUTH and GSPM payloads,
  * depends on the generic secure password method.
  */

@@ -82,15 +82,13 @@ struct private_gspm_authenticator_t
 METHOD(authenticator_t, build_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
+	auth_cfg_t *auth;
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+
 	if(!this->initiator_method)
 	{
-		auth_cfg_t *auth;
-
-		auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 		this->gspm_method_selected = (uintptr_t) auth->
 				get(auth, AUTH_RULE_GSPM_METHOD);
-
-		DBG1(DBG_IKE,"GSPM auth build_i method: %d", this->gspm_method_selected);
 
 		this->initiator_method = charon->gspm->create_instance(
 				charon->gspm, this->gspm_method_selected, FALSE,
@@ -99,7 +97,8 @@ METHOD(authenticator_t, build_initiator, status_t,
 	}
 	if(!this->initiator_method)
 	{
-		DBG1(DBG_IKE,"GSPM failed creating build_initiator instance");
+		DBG1(DBG_IKE,"failed creating GSPM method instance for %N",
+			gspm_methodlist_names, this->gspm_method_selected);
 		return FAILED;
 	}
 	return this->initiator_method->build(this->initiator_method, message);
@@ -108,15 +107,13 @@ METHOD(authenticator_t, build_initiator, status_t,
 METHOD(authenticator_t, process_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
+	auth_cfg_t *auth;
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+
 	if(!this->responder_method)
 	{
-		auth_cfg_t *auth;
-
-		auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 		this->gspm_method_selected = (uintptr_t) auth->
 				get(auth, AUTH_RULE_GSPM_METHOD);
-
-		DBG1(DBG_IKE,"GSPM auth process_r method: %d", this->gspm_method_selected);
 
 		this->responder_method = charon->gspm->create_instance(
 					charon->gspm, this->gspm_method_selected, TRUE,
@@ -125,7 +122,8 @@ METHOD(authenticator_t, process_responder, status_t,
 	}
 	if(!this->responder_method)
 	{
-		DBG1(DBG_IKE,"GSPM failed creating process_responder instance");
+		DBG1(DBG_IKE,"failed creating GSPM method instance for %N",
+			gspm_methodlist_names, this->gspm_method_selected);
 		return FAILED;
 	}
 	return this->responder_method->process(this->responder_method, message);
@@ -134,10 +132,10 @@ METHOD(authenticator_t, process_responder, status_t,
 METHOD(authenticator_t, build_responder, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE,"GSPM auth build from responder");
 	if(!this->responder_method)
 	{
-		DBG1(DBG_IKE,"GSPM failed getting build_responder instance");
+		DBG1(DBG_IKE,"failed getting GSPM method instance for %N",
+			gspm_methodlist_names, this->gspm_method_selected);
 		return FAILED;
 	}
 	return this->responder_method->build( this->responder_method, message);
@@ -146,10 +144,11 @@ METHOD(authenticator_t, build_responder, status_t,
 METHOD(authenticator_t, process_initiator, status_t,
 		private_gspm_authenticator_t *this, message_t *message)
 {
-	DBG1(DBG_IKE,"GSPM auth process from initiator");
+
 	if(!this->initiator_method)
 	{
-		DBG1(DBG_IKE,"GSPM failed getting process_initiator instance");
+		DBG1(DBG_IKE,"failed getting GSPM method instance for %N",
+			gspm_methodlist_names, this->gspm_method_selected);
 		return FAILED;
 	}
 	return this->initiator_method->process(this->initiator_method, message);

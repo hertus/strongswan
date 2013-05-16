@@ -223,7 +223,6 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 			msg.add_conn.me.auth = push_string(&msg, "psk");
 			msg.add_conn.other.auth = push_string(&msg, "psk");
 		}
-		/** PACE add authby GSPM */
 		else if (streq(conn->authby, "gspm"))
 		{
 			msg.add_conn.me.auth = push_string(&msg, "gspm");

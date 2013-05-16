@@ -260,7 +260,7 @@ struct daemon_t {
 	eap_manager_t *eap;
 
 	/**
-	 * PACE GSPM manager to maintain registered GSPM methods
+	 * GSPM manager to maintain registered GSPM methods
 	 */
 	gspm_manager_t *gspm;
 

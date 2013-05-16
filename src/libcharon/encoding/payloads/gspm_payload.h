@@ -17,8 +17,6 @@
  * @{ @ingroup payloads
  */
 
-/** PACE authenticator implementation header */
-
 #ifndef GSPM_PAYLOAD_H_
 #define GSPM_PAYLOAD_H_
 
