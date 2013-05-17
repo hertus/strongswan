@@ -145,8 +145,6 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 				enumerator->destroy(enumerator);
 				this->lock->unlock(this->lock);
 			}
-			DBG1(DBG_IKE, "no supported %N method found",
-				auth_class_names, AUTH_CLASS_GSPM);
 			goto fail;
 		}
 		/**
@@ -172,14 +170,14 @@ METHOD(gspm_manager_t, get_selected_method, u_int16_t,
 				}
 				enumerator->destroy(enumerator);
 				this->lock->unlock(this->lock);
-				DBG1(DBG_IKE, "no supported %N method has been selected",
-					auth_class_names, AUTH_CLASS_GSPM);
 				goto fail;
 			}
 		}
 	}
 
 	fail:
+	DBG1(DBG_IKE, "no supported method for %N authentification",
+		auth_class_names, AUTH_CLASS_GSPM);
 	chunk_free(&data);
 	return 0;
 }
