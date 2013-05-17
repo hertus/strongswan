@@ -189,7 +189,7 @@ bool create_nonce_s(private_gspm_method_pace_t *this)
 	}
 	if(!rng->allocate_bytes(rng, NONCE_SIZE, &this->s))
 	{
-		DBG1(DBG_IKE, "could not create random nonce s");
+		DBG2(DBG_IKE, "could not create random nonce s from RNG");
 		rng->destroy(rng);
 		return FALSE;
 	}
@@ -198,7 +198,7 @@ bool create_nonce_s(private_gspm_method_pace_t *this)
 	return TRUE;
 }
 /**
- * Create DH with new generator GE for PACE
+ * Create DH this->dh_ge with new generator GE for PACE
  */
 bool create_new_dh_ge(private_gspm_method_pace_t *this, bool initiator)
 {
@@ -220,7 +220,7 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this, bool initiator)
 
 	if(!(shared_secret.len > 0))
 	{
-		DBG1(DBG_IKE, "failed to get IKE_INIT shared secret");
+		DBG2(DBG_IKE, "failed to get IKE_INIT shared secret");
 		return FALSE;
 	}
 
@@ -250,6 +250,7 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this, bool initiator)
 			create_nonce_s(this);
 			if(!this->s.len)
 			{
+				DBG2(DBG_IKE, "creating nonce s failed");
 				return FALSE;
 			}
 			mpz_import(nonce_s, this->s.len, 1, 1, 1, 0, this->s.ptr);
@@ -354,6 +355,7 @@ bool create_lts(private_gspm_method_pace_t *this, chunk_t *lts)
 
 	if (!this->dh_ge->get_shared_secret(this->dh_ge, &pace_shared_secret) == SUCCESS)
 	{
+		DBG2(DBG_IKE, "failed to get pace shared secret");
 		return FALSE;
 	}
 
@@ -367,6 +369,7 @@ bool create_lts(private_gspm_method_pace_t *this, chunk_t *lts)
 	if(!this->prf->set_key(this->prf, nonce_seed) ||
 		!this->prf->allocate_bytes(this->prf, pace_seed, lts))
 	{
+		DBG2(DBG_IKE, "prf round creating LTS failed");
 		chunk_clear(&nonce_seed);
 		chunk_clear(&pace_seed);
 		return FALSE;
@@ -393,6 +396,7 @@ bool prf_kpwd(private_gspm_method_pace_t *this, chunk_t pwd, chunk_t nonce_i,
 		!this->prf->allocate_bytes(this->prf, pwd, &spwd) ||
 		!this->prf->set_key(this->prf, nonce_key))
 	{
+		DBG2(DBG_IKE, "prf round creating KPwd failed");
 		return FALSE;
 	}
 
@@ -403,6 +407,7 @@ bool prf_kpwd(private_gspm_method_pace_t *this, chunk_t pwd, chunk_t nonce_i,
 	prfp = prf_plus_create(this->prf, TRUE, spwd);
 	if(!prfp->allocate_bytes(prfp, this->enc_keysize / 8, kpwd))
 	{
+		DBG2(DBG_IKE, "prf+ round creating KPwd failed");
 		chunk_free(&spwd);
 		prfp->destroy(prfp);
 		return FALSE;
@@ -437,6 +442,7 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 
 	if (!this->dh_ge->get_shared_secret(this->dh_ge, &pace_shared_secret) == SUCCESS)
 	{
+		DBG2(DBG_IKE, "failed to get pace shared secret");
 		return FAILED;
 	}
 
@@ -450,6 +456,7 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	if(!this->prf->set_key(this->prf, nonce_seed) ||
 		!this->prf->allocate_bytes(this->prf, pace_shared_secret, &prf_key))
 	{
+		DBG2(DBG_IKE, "prf round for key failed");
 		return FAILED;
 	}
 
@@ -469,6 +476,7 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	if(!this->prf->set_key(this->prf, prf_key) ||
 		!this->prf->allocate_bytes(this->prf, prf_seed, auth_data))
 	{
+		DBG2(DBG_IKE, "prf round for AUTH failed");
 		chunk_free(&prf_seed);
 		chunk_free(&prf_key);
 		return FAILED;
@@ -496,15 +504,14 @@ bool verify_auth(private_gspm_method_pace_t *this, message_t *message)
 		return FALSE;
 	}
 
-	recv_auth_data = auth_payload->get_data(auth_payload);
-
 	if(!prf_auth_data(this, &auth_data, this->ike_sa->get_other_id(this->ike_sa),
 		this->received_init, this->received_nonce, TRUE))
 	{
-		chunk_free(&recv_auth_data);
+		DBG2(DBG_IKE, "creating AUTH data failed");
 		return FALSE;
 	}
 
+	recv_auth_data = chunk_clone(auth_payload->get_data(auth_payload));
 	if(!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
 		chunk_free(&auth_data);
@@ -548,6 +555,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id, other_id);
 		if(!shared_key)
 		{
+			DBG2(DBG_IKE, "getting shared key failed");
 			return FAILED;
 		}
 
@@ -568,7 +576,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 			DBG1(DBG_IKE, "failed creating new DH");
 			return FAILED;
 		}
-
+		DBG4(DBG_IKE, "nonce s %B", &this->s);
 
 		/**
 		 * Encrypting the NONCE
@@ -589,35 +597,42 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		if(!crypter)
 		{
 			DBG1(DBG_IKE, "failed creating crypter");
+			chunk_free(&kpwd);
 			return FAILED;
 		}
-
-		iv.len = crypter->get_iv_size(crypter);
 
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 		if (!rng)
 		{
 			DBG1(DBG_IKE, "no RNG found");
+			chunk_free(&kpwd);
+			crypter->destroy(crypter);
 			return FAILED;
 		}
+
+		iv.len = crypter->get_iv_size(crypter);
 		if(!rng->allocate_bytes(rng, iv.len, &iv))
 		{
 			DBG1(DBG_IKE, "failed creating IV");
+			chunk_free(&kpwd);
+			crypter->destroy(crypter);
 			rng->destroy(rng);
 			return FAILED;
 		}
 		rng->destroy(rng);
 
-		DBG4(DBG_IKE, "nonce s %B", &this->s);
-
 		if(!crypter->set_key(crypter, kpwd) ||
 			!crypter->encrypt(crypter, this->s, iv, &enonce))
 		{
 			DBG1(DBG_IKE, "failed encrypting the nonce");
+			chunk_free(&kpwd);
 			crypter->destroy(crypter);
 			return FAILED;
 		}
+		chunk_free(&kpwd);
 		crypter->destroy(crypter);
+
+		DBG4(DBG_IKE, "encryptet nonce s %B", &enonce);
 
 		/* gspm_data = subtype | IV | ENONCE */
 		gspm_data = chunk_cat("mmm", chunk_from_thing(st), iv, enonce);
@@ -646,14 +661,15 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		auth_payload = auth_payload_create();
 		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
 		auth_payload->set_data(auth_payload, auth_data);
+		chunk_free(&auth_data);
 		message->add_payload(message, (payload_t*)auth_payload);
 
 		/**
 		 * TODO if Long Term Secret is used
+		create_lts(this, &lts);
 		message->add_notify(message, FALSE, PSK_PERSIST, chunk_empty);
 		 */
 
-		chunk_free(&auth_data);
 		return NEED_MORE;
 	}
 }
@@ -672,21 +688,6 @@ METHOD(gspm_method_t, process_responder, status_t,
 
 	if(!message->get_payload(message, AUTHENTICATION))
 	{
-		gspm_payload = (gspm_payload_t*)message->get_payload(message,
-			GENERIC_SECURE_PASSWORD_METHOD);
-		if(!gspm_payload )
-		{
-			DBG1(DBG_IKE, "GSPM payload missing");
-			return FAILED;
-		}
-
-		ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE);
-		if(!ke_payload)
-		{
-			DBG1(DBG_IKE, "KE payload missing");
-			return FAILED;
-		}
-
 		/**
 		 * TODO: PACE password instead of PSK
 		 */
@@ -713,6 +714,21 @@ METHOD(gspm_method_t, process_responder, status_t,
 
 		map_cm_encr(this);
 
+		gspm_payload = (gspm_payload_t*)message->get_payload(message,
+			GENERIC_SECURE_PASSWORD_METHOD);
+		if(!gspm_payload )
+		{
+			DBG1(DBG_IKE, "GSPM payload missing");
+			return FAILED;
+		}
+
+		ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE);
+		if(!ke_payload)
+		{
+			DBG1(DBG_IKE, "KE payload missing");
+			return FAILED;
+		}
+
 		/**
 		 * Decrypt ENONCE
 		 */
@@ -725,7 +741,7 @@ METHOD(gspm_method_t, process_responder, status_t,
 		}
 
 		iv.len = crypter->get_iv_size(crypter);
-		recv_gspm_data = gspm_payload->get_data(gspm_payload);
+		recv_gspm_data = chunk_clone(gspm_payload->get_data(gspm_payload));
 
 		reader = bio_reader_create(recv_gspm_data);
 		if(!reader->read_uint8(reader, &st) ||
@@ -733,10 +749,12 @@ METHOD(gspm_method_t, process_responder, status_t,
 			!reader->read_data(reader, reader->remaining(reader), &enonce))
 		{
 			DBG1(DBG_IKE, "reading GSPM payload failed");
+			chunk_free(&recv_gspm_data);
 			reader->destroy(reader);
 			return FAILED;
 		}
-		reader->destroy(reader);
+
+		DBG4(DBG_IKE, "encryptet nonce s %B", &enonce);
 
 		/**
 		 * Fail if state value in GSPM payload is not pace_reserved = 0
@@ -744,6 +762,8 @@ METHOD(gspm_method_t, process_responder, status_t,
 		if(st != 0)
 		{
 			DBG1(DBG_IKE, "subtype in GSPM payload not PACE RESERVED");
+			chunk_free(&recv_gspm_data);
+			reader->destroy(reader);
 			return FAILED;
 		}
 
@@ -752,11 +772,14 @@ METHOD(gspm_method_t, process_responder, status_t,
 		{
 			DBG1(DBG_IKE, "failed to decrypt enonce");
 			chunk_free(&iv);
-			chunk_free(&enonce);
 			chunk_free(&kpwd);
 			crypter->destroy(crypter);
 			return FAILED;
 		}
+		chunk_free(&iv);
+		chunk_free(&kpwd);
+		chunk_free(&recv_gspm_data);
+		reader->destroy(reader);
 		crypter->destroy(crypter);
 
 		DBG4(DBG_IKE, "nonce s %B", &this->s);
@@ -819,13 +842,19 @@ METHOD(gspm_method_t, build_responder, status_t,
 		auth_payload = auth_payload_create();
 		auth_payload->set_auth_method(auth_payload, AUTH_GSPM);
 		auth_payload->set_data(auth_payload, auth_data);
+		chunk_free(&auth_data);
 		message->add_payload(message, (payload_t*)auth_payload);
 
 		/**
 		 * TODO if Long Term Secret is used
-		message->add_notify(message, FALSE, PSK_PERSIST, chunk_empty);
+		 *
+		if(message->get_notify(message, PSK_PERSIST))
+		{
+			create_lts(this, &lts);
+			message->add_notify(message, FALSE, PSK_CONFIRM, chunk_empty);
+		}
 		 */
-		chunk_free(&auth_data);
+
 		return SUCCESS;
 	}
 }
