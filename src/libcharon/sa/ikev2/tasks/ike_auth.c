@@ -1040,6 +1040,11 @@ METHOD(task_t, process_i, status_t,
 					goto peer_auth_failed;
 				}
 			}
+			else
+			{
+				/* responder omitted AUTH payload, indicating EAP-only */
+				mutual_eap = TRUE;
+			}
 		}
 		if (this->other_auth)
 		{
@@ -1062,7 +1067,7 @@ METHOD(task_t, process_i, status_t,
 			goto peer_auth_failed;
 		}
 
-		if (!mutual_eap && !this->gspm_method_selected)
+		if (!mutual_eap)
 		{
 			apply_auth_cfg(this, FALSE);
 		}
