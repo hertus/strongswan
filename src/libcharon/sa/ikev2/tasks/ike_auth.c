@@ -1026,8 +1026,7 @@ METHOD(task_t, process_i, status_t,
 			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 			cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
 
-			if (message->get_payload(message, AUTHENTICATION) &&
-				!this->gspm_method_selected)
+			if (message->get_payload(message, AUTHENTICATION))
 			{
 				/* verify authentication data */
 				this->other_auth = authenticator_create_verifier(this->ike_sa,
