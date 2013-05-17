@@ -762,15 +762,12 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
-	auth_cfg_t *cfg;
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
 	ts_payload_t *ts_payload;
 
 	/* defaults to TUNNEL mode */
 	this->mode = MODE_TUNNEL;
-
-	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -782,23 +779,21 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				this->proposals = sa_payload->get_proposals(sa_payload);
 				break;
 			case KEY_EXCHANGE:
-				/**
-				 * GSPM could have another KE round in IKE_AUTH
-				 */
-				if(cfg->get(cfg, AUTH_RULE_GSPM_METHOD))
+				if (message->get_exchange_type(message) == IKE_AUTH)
 				{
-					ke_payload = (ke_payload_t*)payload;
-					if (!this->initiator)
-					{
-						this->dh_group = ke_payload->get_dh_group_number(ke_payload);
-						this->dh = this->keymat->keymat.create_dh(
-												&this->keymat->keymat, this->dh_group);
-					}
-					if (this->dh)
-					{
-						this->dh->set_other_public_value(this->dh,
-									ke_payload->get_key_exchange_data(ke_payload));
-					}
+					continue;
+				}
+				ke_payload = (ke_payload_t*)payload;
+				if (!this->initiator)
+				{
+					this->dh_group = ke_payload->get_dh_group_number(ke_payload);
+					this->dh = this->keymat->keymat.create_dh(
+											&this->keymat->keymat, this->dh_group);
+				}
+				if (this->dh)
+				{
+					this->dh->set_other_public_value(this->dh,
+								ke_payload->get_key_exchange_data(ke_payload));
 				}
 				break;
 			case TRAFFIC_SELECTOR_INITIATOR:
