@@ -30,7 +30,7 @@ typedef struct gspm_method_pace_t gspm_method_pace_t;
 struct gspm_method_pace_t {
 
 	/**
-	 * implements gspm_method interface
+	 * Implements gspm_method interface
 	 */
 	gspm_method_t gspm_method;
 

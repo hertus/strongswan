@@ -43,7 +43,7 @@ struct private_gspm_method_pace_t {
 	gspm_method_pace_t public;
 
 	/**
-	 * if its a verifier or not
+	 * If its a verifier or not
 	 */
 	bool pace_verifier;
 
@@ -53,22 +53,22 @@ struct private_gspm_method_pace_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * others nonce to include in AUTH calculation
+	 * Others nonce to include in AUTH calculation
 	 */
 	chunk_t received_nonce;
 
 	/**
-	 * our nonce to include in AUTH calculation
+	 * Our nonce to include in AUTH calculation
 	 */
 	chunk_t sent_nonce;
 
 	/**
-	 * others IKE_SA_INIT message data to include in AUTH calculation
+	 * Others IKE_SA_INIT message data to include in AUTH calculation
 	 */
 	chunk_t received_init;
 
 	/**
-	 * our IKE_SA_INIT message data to include in AUTH calculation
+	 * Our IKE_SA_INIT message data to include in AUTH calculation
 	 */
 	chunk_t sent_init;
 
@@ -78,22 +78,22 @@ struct private_gspm_method_pace_t {
 	char reserved[3];
 
 	/**
-	 * new DH with GE
+	 * New DH with GE
 	 */
 	diffie_hellman_t *dh_ge;
 
 	/**
-	 * other public key from DH
+	 * Other public key from DH
 	 */
 	chunk_t my_pke;
 
 	/**
-	 * other public key from DH
+	 * Other public key from DH
 	 */
 	chunk_t other_pke;
 
 	/**
-	 * random nonce s
+	 * Random nonce s
 	 */
 	chunk_t s;
 
@@ -178,7 +178,7 @@ void map_cm_encr(private_gspm_method_pace_t *this)
 }
 
 /**
- * creating NONCE s - size 32 octets
+ * Creating NONCE s - size 32 octets
  * nonce not weak -> don't use noncegen, use rng with STRONG
  * if nonce not random enough, so GE becomes 1 -> redo until ROUND_LIMIT
  */
@@ -326,7 +326,7 @@ bool create_new_dh_ge(private_gspm_method_pace_t *this, bool initiator)
 	new_ge =  mpz_to_chunk(ge);
 
 	/**
-	 * Create new DH with MODP_CUSTOM and g, p
+	 * Creates new DH with MODP_CUSTOM and g, p
 	 */
 	this->dh_ge = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM,
 		new_ge, dh_param->prime);
@@ -386,7 +386,7 @@ bool create_lts(private_gspm_method_pace_t *this, chunk_t *lts)
 }
 
 /**
- * prf function to create KPwd from key (password)
+ * PRF function to create KPwd from key (password)
  */
 bool prf_kpwd(private_gspm_method_pace_t *this, chunk_t pwd, chunk_t nonce_i,
 	chunk_t nonce_r, chunk_t *kpwd)
@@ -424,7 +424,7 @@ bool prf_kpwd(private_gspm_method_pace_t *this, chunk_t pwd, chunk_t nonce_i,
 }
 
 /**
- * prf function to create AUTH payload
+ * PRF function to create AUTH payload
  */
 bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	identification_t *id, chunk_t init, chunk_t nonce, bool verify)
@@ -575,12 +575,12 @@ METHOD(gspm_method_t, build_initiator, status_t,
 			return FAILED;
 		}
 		/**
-		 * set new keysize when we change encryption algorithm
+		 * Set new keysize when we change encryption algorithm
 		 */
 		this->enc_keysize = crypter->get_key_size(crypter)*8;
 
 		/**
-		 * generate KPwd
+		 * Generate KPwd
 		 */
 		if(!prf_kpwd(this, shared_key->get_key(shared_key), this->sent_nonce,
 			this->received_nonce, &kpwd))
@@ -731,7 +731,7 @@ METHOD(gspm_method_t, process_responder, status_t,
 			return FAILED;
 		}
 		/**
-		 * set new keysize when we change encryption algorithm
+		 * Set new keysize when we change encryption algorithm
 		 */
 		this->enc_keysize = crypter->get_key_size(crypter)*8;
 		iv.len = crypter->get_iv_size(crypter);

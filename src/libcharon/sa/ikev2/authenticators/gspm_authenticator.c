@@ -39,22 +39,22 @@ struct private_gspm_authenticator_t
 	ike_sa_t *ike_sa;
 
 	/**
-	 * others nonce to include in AUTH calculation
+	 * Others nonce to include in AUTH calculation
 	 */
 	chunk_t received_nonce;
 
 	/**
-	 * our nonce to include in AUTH calculation
+	 * Our nonce to include in AUTH calculation
 	 */
 	chunk_t sent_nonce;
 
 	/**
-	 * others IKE_SA_INIT message data to include in AUTH calculation
+	 * Others IKE_SA_INIT message data to include in AUTH calculation
 	 */
 	chunk_t received_init;
 
 	/**
-	 * our IKE_SA_INIT message data to include in AUTH calculation
+	 * Our IKE_SA_INIT message data to include in AUTH calculation
 	 */
 	chunk_t sent_init;
 
@@ -64,7 +64,7 @@ struct private_gspm_authenticator_t
 	char reserved[3];
 
 	/**
-	 * selected GSPM method from IKE_SA_INIT via auth_cfg
+	 * Selected GSPM method from IKE_SA_INIT via auth_cfg
 	 */
 	u_int16_t gspm_method_selected;
 

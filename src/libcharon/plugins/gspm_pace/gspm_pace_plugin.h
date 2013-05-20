@@ -32,13 +32,13 @@ typedef struct gspm_pace_plugin_t gspm_pace_plugin_t;
 struct gspm_pace_plugin_t {
 
 	/**
-	 * implements plugin interface
+	 * Implements plugin interface
 	 */
 	plugin_t plugin;
 };
 
 /**
- * Listener getting DH object
+ * Listener getting shared secret
  */
 gspm_pace_listener_t *gspm_pace_listener;
 

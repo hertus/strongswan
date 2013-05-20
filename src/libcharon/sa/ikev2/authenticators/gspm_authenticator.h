@@ -55,7 +55,7 @@ struct gspm_authenticator_t
 };
 
 /**
- * Create an authenticator to authenticate against responder.
+ * Creates an authenticator to authenticate against responder.
  *
  * @param ike_sa                        associated ike_sa
  * @param received_nonce				nonce received in IKE_SA_INIT
@@ -70,7 +70,7 @@ gspm_authenticator_t *gspm_authenticator_create_builder(ike_sa_t *ike_sa,
 		chunk_t sent_init, char reserved[3]);
 
 /**
- * Create an authenticator to verify secure passwords.
+ * Creates an authenticator to verify secure passwords.
  *
  * @param ike_sa                        associated ike_sa
  * @param received_nonce				nonce received in IKE_SA_INIT

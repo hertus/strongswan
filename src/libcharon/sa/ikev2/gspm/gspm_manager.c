@@ -39,13 +39,13 @@ struct gspm_entry_t {
 	u_int16_t method_id;
 
 	/**
-	 * constructor function to create instance
+	 * Constructor function to create instance
 	 */
 	gspm_method_constructor_t constructor;
 };
 
 /**
- * private data of gspm_manager
+ * Private data of gspm_manager
  */
 struct private_gspm_manager_t {
 	/**

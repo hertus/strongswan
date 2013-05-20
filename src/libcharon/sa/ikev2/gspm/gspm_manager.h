@@ -37,7 +37,7 @@ enum gspm_methodlist_t {
 };
 
 /**
- * enum names for gspm_methodlist_names.
+ * Enum names for gspm_methodlist_names.
  */
 extern enum_name_t *gspm_methodlist_names;
 
