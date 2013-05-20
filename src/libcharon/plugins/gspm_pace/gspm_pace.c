@@ -159,11 +159,17 @@ void map_cm_encr(private_gspm_method_pace_t *this)
 		case ENCR_AES_GCM_ICV8:
 		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
+			DBG1(DBG_IKE, "changing encryption algorithm for nonce encryption "
+				"from %N to %N",encryption_algorithm_names, this->enc_algorithm,
+				encryption_algorithm_names, ENCR_AES_CTR);
 			this->enc_algorithm = ENCR_AES_CTR;
 			break;
 		case ENCR_CAMELLIA_CCM_ICV8:
 		case ENCR_CAMELLIA_CCM_ICV12:
 		case ENCR_CAMELLIA_CCM_ICV16:
+			DBG1(DBG_IKE, "changing encryption algorithm for nonce encryption "
+				"from %N to %N",encryption_algorithm_names, this->enc_algorithm,
+				encryption_algorithm_names, ENCR_CAMELLIA_CTR);
 			this->enc_algorithm = ENCR_CAMELLIA_CTR;
 			break;
 		default:
@@ -547,48 +553,16 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		 */
 		my_id = this->ike_sa->get_my_id(this->ike_sa);
 		other_id = this->ike_sa->get_other_id(this->ike_sa);
+		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id, other_id);
+		if(!shared_key)
+		{
+			DBG2(DBG_IKE, "failed getting shared key");
+			return FAILED;
+		}
 
 		DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %N",
 			 my_id, auth_class_names, AUTH_CLASS_GSPM,
 			 gspm_methodlist_names, GSPM_PACE);
-
-		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id, other_id);
-		if(!shared_key)
-		{
-			DBG2(DBG_IKE, "getting shared key failed");
-			return FAILED;
-		}
-
-		if(!prf_kpwd(this, shared_key->get_key(shared_key), this->sent_nonce,
-			this->received_nonce, &kpwd))
-		{
-			DBG1(DBG_IKE, "failed creating KPwd");
-			shared_key->destroy(shared_key);
-			return FAILED;
-		}
-		shared_key->destroy(shared_key);
-
-		/**
-		 * New DH round with random s
-		 */
-		if(!create_new_dh_ge(this, TRUE))
-		{
-			DBG1(DBG_IKE, "failed creating new DH");
-			return FAILED;
-		}
-		DBG4(DBG_IKE, "nonce s %B", &this->s);
-
-		/**
-		 * Encrypting the NONCE
-		 * ENONCE = E(KPwd, s)
-		 */
-		if(!(kpwd.len == this->enc_keysize / 8))
-		{
-			DBG1(DBG_IKE, "KPwd is not in keysize, KPwd: %d bytes, keysize: %d bytes",
-				kpwd.len, this->enc_keysize / 8);
-			chunk_free(&kpwd);
-			return FAILED;
-		}
 
 		map_cm_encr(this);
 
@@ -597,10 +571,52 @@ METHOD(gspm_method_t, build_initiator, status_t,
 		if(!crypter)
 		{
 			DBG1(DBG_IKE, "failed creating crypter");
+			shared_key->destroy(shared_key);
+			return FAILED;
+		}
+		/**
+		 * set new keysize when we change encryption algorithm
+		 */
+		this->enc_keysize = crypter->get_key_size(crypter)*8;
+
+		/**
+		 * generate KPwd
+		 */
+		if(!prf_kpwd(this, shared_key->get_key(shared_key), this->sent_nonce,
+			this->received_nonce, &kpwd))
+		{
+			DBG1(DBG_IKE, "failed creating KPwd");
+			shared_key->destroy(shared_key);
+			crypter->destroy(crypter);
+			return FAILED;
+		}
+		shared_key->destroy(shared_key);
+
+		if(!(kpwd.len == crypter->get_key_size(crypter)))
+		{
+			DBG1(DBG_IKE, "KPwd is not in keysize, KPwd: %d bytes, keysize: %d bytes",
+				kpwd.len, crypter->get_key_size(crypter));
+			crypter->destroy(crypter);
 			chunk_free(&kpwd);
 			return FAILED;
 		}
 
+		/**
+		 * New DH round with random s
+		 */
+		if(!create_new_dh_ge(this, TRUE))
+		{
+			DBG1(DBG_IKE, "failed creating new DH");
+			crypter->destroy(crypter);
+			chunk_free(&kpwd);
+			return FAILED;
+		}
+		DBG4(DBG_IKE, "nonce s %B", &this->s);
+
+		/**
+		 * Encrypting the NONCE
+		 * ENONCE = E(KPwd, s)
+		 */
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 		if (!rng)
 		{
@@ -693,32 +709,49 @@ METHOD(gspm_method_t, process_responder, status_t,
 		 */
 		my_id = this->ike_sa->get_my_id(this->ike_sa);
 		other_id = this->ike_sa->get_other_id(this->ike_sa);
+		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id, other_id);
+		if(!shared_key)
+		{
+			DBG1(DBG_IKE, "failed getting shared key");
+			return FAILED;
+		}
 
 		DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %N",
 			 my_id, auth_class_names, AUTH_CLASS_GSPM,
 			 gspm_methodlist_names, GSPM_PACE);
 
-		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id, other_id);
-		if(!shared_key)
+		map_cm_encr(this);
+
+		crypter = lib->crypto->create_crypter(lib->crypto, this->enc_algorithm,
+			this->enc_keysize / 8);
+		if(!crypter)
 		{
+			DBG1(DBG_IKE, "failed creating crypter");
+			shared_key->destroy(shared_key);
 			return FAILED;
 		}
+		/**
+		 * set new keysize when we change encryption algorithm
+		 */
+		this->enc_keysize = crypter->get_key_size(crypter)*8;
+		iv.len = crypter->get_iv_size(crypter);
+
 		if(!prf_kpwd(this, shared_key->get_key(shared_key), this->received_nonce,
 			this->sent_nonce, &kpwd))
 		{
 			DBG1(DBG_IKE, "failed creating KPwd");
+			crypter->destroy(crypter);
 			shared_key->destroy(shared_key);
 			return FAILED;
 		}
 		shared_key->destroy(shared_key);
-
-		map_cm_encr(this);
 
 		gspm_payload = (gspm_payload_t*)message->get_payload(message,
 			GENERIC_SECURE_PASSWORD_METHOD);
 		if(!gspm_payload )
 		{
 			DBG1(DBG_IKE, "GSPM payload missing");
+			crypter->destroy(crypter);
 			return FAILED;
 		}
 
@@ -726,21 +759,13 @@ METHOD(gspm_method_t, process_responder, status_t,
 		if(!ke_payload)
 		{
 			DBG1(DBG_IKE, "KE payload missing");
+			crypter->destroy(crypter);
 			return FAILED;
 		}
 
 		/**
 		 * Decrypt ENONCE
 		 */
-		crypter = lib->crypto->create_crypter(lib->crypto, this->enc_algorithm,
-			this->enc_keysize / 8);
-		if(!crypter)
-		{
-			DBG1(DBG_IKE, "failed creating crypter");
-			return FAILED;
-		}
-
-		iv.len = crypter->get_iv_size(crypter);
 		recv_gspm_data = chunk_clone(gspm_payload->get_data(gspm_payload));
 
 		reader = bio_reader_create(recv_gspm_data);

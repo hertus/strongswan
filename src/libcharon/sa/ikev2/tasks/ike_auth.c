@@ -934,7 +934,7 @@ METHOD(task_t, process_i, status_t,
 	enumerator_t *enumerator;
 	payload_t *payload;
 	auth_cfg_t *cfg;
-	bool mutual_eap = FALSE;
+	bool mutual_auth = FALSE;
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
@@ -1041,8 +1041,8 @@ METHOD(task_t, process_i, status_t,
 			}
 			else
 			{
-				/* responder omitted AUTH payload, indicating EAP-only */
-				mutual_eap = TRUE;
+				/* responder omitted AUTH payload, indicating EAP/GSPM-only */
+				mutual_auth = TRUE;
 			}
 		}
 		if (this->other_auth)
@@ -1066,7 +1066,7 @@ METHOD(task_t, process_i, status_t,
 			goto peer_auth_failed;
 		}
 
-		if (!mutual_eap)
+		if (!mutual_auth)
 		{
 			apply_auth_cfg(this, FALSE);
 		}
@@ -1093,14 +1093,14 @@ METHOD(task_t, process_i, status_t,
 				return FAILED;
 		}
 	}
-	if (mutual_eap)
+	if (mutual_auth)
 	{
 		if (!this->my_auth || !this->my_auth->is_mutual(this->my_auth))
 		{
-			DBG1(DBG_IKE, "do not allow non-mutual EAP-only authentication");
+			DBG1(DBG_IKE, "do not allow non-mutual EAP/GSPM-only authentication");
 			goto peer_auth_failed;
 		}
-		DBG1(DBG_IKE, "allow mutual EAP-only authentication");
+		DBG1(DBG_IKE, "allow mutual EAP/GSPM-only authentication");
 	}
 
 	if (message->get_notify(message, ANOTHER_AUTH_FOLLOWS) == NULL)
