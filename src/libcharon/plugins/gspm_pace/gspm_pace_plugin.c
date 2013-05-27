@@ -21,12 +21,12 @@
 typedef struct private_gspm_pace_plugin_t private_gspm_pace_plugin_t;
 
 /**
- * private data of gspm_pace plugin
+ * Private data of gspm_pace plugin
  */
 struct private_gspm_pace_plugin_t {
 
 	/**
-	 * implements plugin interface
+	 * Implements plugin interface
 	 */
 	gspm_pace_plugin_t public;
 };

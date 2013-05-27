@@ -40,9 +40,9 @@ struct gspm_pace_listener_t {
 	void (*destroy)(gspm_pace_listener_t *this);
 
 	/**
-	 * gets a dh_object which has been captured from bus
-	 * @param ike_sa	ike_sa from round
-	 * @return			iffie_hellman_t object
+	 * Gets a shared secret which has been captured from IKE_SA_INIT
+	 * @param ike_sa	ike_sa from actual round
+	 * @return			chunk_t shared secret
 	 */
 	chunk_t (*get_shared_secret)(gspm_pace_listener_t *this, ike_sa_t *ike_sa);
 };

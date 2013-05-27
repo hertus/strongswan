@@ -13,8 +13,8 @@
  */
 
 /**
- * @defgroup gspm gspm
- * @{ @ingroup sa
+ * @defgroup gspm_method gspm_method
+ * @{ @ingroup gspm
  */
 
 #ifndef GSPM_METHOD_H_

@@ -24,7 +24,7 @@ typedef struct private_gspm_pace_listener_t private_gspm_pace_listener_t;
 typedef struct dh_entry_t dh_entry_t;
 
 /**
- * dh object entry
+ * DH object entry
  */
 struct dh_entry_t {
 
@@ -55,15 +55,15 @@ struct private_gspm_pace_listener_t {
 	ike_sa_id_t *ike_sa_id;
 
 	/**
-	 * hashtable with dh objects relevant for gspm_pace connections
-	 * @key		SPI
-	 * @value	dh object
+	 * Hashtable with DH objects relevant for gspm_pace connections
+	 * @key		ike_sa_id
+	 * @value	dh_entry object
 	 */
 	hashtable_t *dh_objects;
 };
 
 /**
- * creates a hash value from 2 SPI's for uniqueness
+ * Creates a hash value from 2 SPI's for uniqueness
  */
 static u_int32_t create_spi_hash(ike_sa_id_t *id)
 {
