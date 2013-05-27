@@ -489,8 +489,17 @@ bool prf_auth_data(private_gspm_method_pace_t *this, chunk_t *auth_data,
 	}
 
 	DBG4(DBG_IKE, "PACESharedSecret %B", &pace_shared_secret);
-	DBG3(DBG_IKE, "AUTH = prf(prf(Ni | Nr, PACESharedSecret),"
-		"<InitiatorSignedOctets> | PKEir) %B", auth_data);
+	if(this->ike_sa->get_id(this->ike_sa)->is_initiator(this->ike_sa->
+		get_id(this->ike_sa)))
+	{
+		DBG3(DBG_IKE, "AUTHi = prf(prf(Ni | Nr, PACESharedSecret),"
+			"<InitiatorSignedOctets> | PKEr) %B", auth_data);
+	}
+	else
+	{
+		DBG3(DBG_IKE, "AUTHr = prf(prf(Ni | Nr, PACESharedSecret),"
+			"<ResponderSignedOctets> | PKEi) %B", auth_data);
+	}
 
 	chunk_free(&prf_seed);
 	chunk_free(&prf_key);
@@ -520,12 +529,15 @@ bool verify_auth(private_gspm_method_pace_t *this, message_t *message)
 	recv_auth_data = chunk_clone(auth_payload->get_data(auth_payload));
 	if(!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
+		DBG2(DBG_IKE, "verification of AUTH payloads failed");
 		chunk_free(&auth_data);
 		chunk_free(&recv_auth_data);
 		return FALSE;
 	}
 	chunk_free(&auth_data);
 	chunk_free(&recv_auth_data);
+
+	DBG2(DBG_IKE, "verification of AUTH payloads successfull");
 
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_GSPM);

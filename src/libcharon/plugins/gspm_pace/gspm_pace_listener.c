@@ -124,7 +124,7 @@ METHOD(listener_t, message, bool, private_gspm_pace_listener_t *this,
 		}
 	}
 	else
-	{	/** Reponder has selected method and send his notify */
+	{	/** Responder has selected method and send his notify */
 		if (incoming && message->get_exchange_type(message) == IKE_SA_INIT)
 		{
 			notify_payload = message->get_notify(message,
