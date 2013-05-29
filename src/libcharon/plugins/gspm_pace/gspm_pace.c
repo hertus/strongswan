@@ -130,6 +130,18 @@ struct private_gspm_method_pace_t {
 };
 
 /**
+ * Clean up temporary values after authentication success/fail
+ */
+void cleanup(private_gspm_method_pace_t *this)
+{
+	DESTROY_IF(this->dh_ge);
+	DESTROY_IF(this->prf);
+	chunk_free(&this->s);
+	chunk_free(&this->my_pke);
+	chunk_free(&this->other_pke);
+}
+
+/**
  * Convert a MP integer into a chunk_t
  */
 chunk_t mpz_to_chunk(const mpz_t value)
@@ -561,7 +573,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 	if(!this->round_two)
 	{
 		/**
-		 * TODO: PACE password instead of PSK
+		 * TODO: PACE password or LTS instead of PSK
 		 */
 		my_id = this->ike_sa->get_my_id(this->ike_sa);
 		other_id = this->ike_sa->get_other_id(this->ike_sa);
@@ -653,6 +665,7 @@ METHOD(gspm_method_t, build_initiator, status_t,
 			!crypter->encrypt(crypter, this->s, iv, &enonce))
 		{
 			DBG1(DBG_IKE, "failed encrypting the nonce");
+			chunk_free(&this->s);
 			chunk_free(&kpwd);
 			crypter->destroy(crypter);
 			return FAILED;
@@ -810,6 +823,7 @@ METHOD(gspm_method_t, process_responder, status_t,
 			DBG1(DBG_IKE, "failed to decrypt enonce");
 			chunk_free(&iv);
 			chunk_free(&kpwd);
+			chunk_free(&this->s);
 			crypter->destroy(crypter);
 			return FAILED;
 		}
@@ -839,11 +853,13 @@ METHOD(gspm_method_t, process_responder, status_t,
 			DBG1(DBG_IKE, "authentication of '%Y' with %N method %N failed",
 				this->ike_sa->get_other_id(this->ike_sa), auth_method_names,
 				AUTH_GSPM, gspm_methodlist_names, GSPM_PACE);
+			cleanup(this);
 			return FAILED;
 		}
 		DBG1(DBG_IKE, "authentication of '%Y' with %N method %N successful",
 			this->ike_sa->get_other_id(this->ike_sa), auth_method_names,
 			AUTH_GSPM, gspm_methodlist_names, GSPM_PACE);
+
 		return NEED_MORE;
 	}
 }
@@ -873,6 +889,7 @@ METHOD(gspm_method_t, build_responder, status_t,
 			this->sent_init, this->sent_nonce, FALSE))
 		{
 			DBG1(DBG_IKE, "failed creating AUTH payload");
+			cleanup(this);
 			return FAILED;
 		}
 
@@ -892,6 +909,7 @@ METHOD(gspm_method_t, build_responder, status_t,
 		}
 		 */
 
+		cleanup(this);
 		return SUCCESS;
 	}
 }
@@ -922,11 +940,13 @@ METHOD(gspm_method_t, process_initiator, status_t,
 			DBG1(DBG_IKE, "authentication of '%Y' with %N method %N failed",
 				this->ike_sa->get_other_id(this->ike_sa), auth_method_names,
 				AUTH_GSPM, gspm_methodlist_names, GSPM_PACE);
+			cleanup(this);
 			return FAILED;
 		}
 		DBG1(DBG_IKE, "authentication of '%Y' with %N method %N successful",
 			this->ike_sa->get_other_id(this->ike_sa), auth_method_names,
 			AUTH_GSPM, gspm_methodlist_names, GSPM_PACE);
+		cleanup(this);
 		return SUCCESS;
 	}
 }
@@ -934,11 +954,6 @@ METHOD(gspm_method_t, process_initiator, status_t,
 METHOD(gspm_method_t, destroy, void,
 		private_gspm_method_pace_t *this)
 {
-	DESTROY_IF(this->dh_ge);
-	DESTROY_IF(this->prf);
-	chunk_free(&this->my_pke);
-	chunk_free(&this->other_pke);
-	chunk_free(&this->s);
 	free(this);
 }
 
